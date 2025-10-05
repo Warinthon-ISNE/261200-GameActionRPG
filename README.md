@@ -1,8 +1,12 @@
 # 261200-GameActionRPG
 
-/// *Note for Pond* -- Warinthon or who thats been coding the MainGame.
+/// *Note for Pond* -- Warinthon or who thats been coding the MainGame. ///
+
+I've been alrady create the Google Drive folder to stored some translucent png file, you and everyone be able to see,
+[Jump in Drive](https://drive.google.com/drive/folders/1ufpBIZez97-RrK6dsuVYBR6SP3JCLgV_?usp=sharing)
+
 for using Ememy, please adding Enemy array in Create() before render()
-using #import com.badlogic.gdx.utils.Array and don't forget import Enemy or entities package. ///
+using #import com.badlogic.gdx.utils.Array and don't forget import Enemy or entities package.
 
 You can create the function that 'Spawn' enemies with array enemies
 ex.
