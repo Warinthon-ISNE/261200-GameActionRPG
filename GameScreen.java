@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.MathUtils;
@@ -17,9 +18,13 @@ public class GameScreen implements Screen {
     private Sprite heroSprite;
 
     private Viewport viewport;
+    private OrthographicCamera camera;//camera to follow the player
 
-    private static final float WORLD_WIDTH = 8f;
-    private static final float WORLD_HEIGHT = 5f;
+    private Texture backgroundTexture; // for background
+
+    // world size for background
+    private static final float WORLD_WIDTH = 20f;
+    private static final float WORLD_HEIGHT = 10f;
 
     public GameScreen(Main game) {
         this.game = game;
@@ -27,23 +32,31 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT);
+        //create camera and viewport
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(8f, 5f, camera); // viewport size　"camera" uses this view
+        viewport.apply();
 
-        // Character
-        hero = new Character(100, 20, 5, 2, 1); // hp, atk, def, startX, startY
+        // load background
+        backgroundTexture = new Texture("noblehouse01.png");
+
+        hero = new Character(100, 20, 5, 2, 1);
 
         Texture heroTexture = new Texture("S__16261125-removebg-preview.png");
         heroSprite = new Sprite(heroTexture);
 
-        // Hero size in world units
         heroSprite.setSize(1.5f, 1.5f);
         heroSprite.setPosition(hero.getPosition().x, hero.getPosition().y);
+
+        camera.position.set(hero.getPosition().x, hero.getPosition().y, 0);
+        camera.update();
     }
 
     @Override
     public void render(float delta) {
         input(delta);
         logic(delta);
+        updateCamera(delta);
         draw();
     }
 
@@ -62,42 +75,83 @@ public class GameScreen implements Screen {
     }
 
     private void logic(float delta) {
-        // Clamp hero inside world bounds
         float worldWidth = viewport.getWorldWidth();
         float worldHeight = viewport.getWorldHeight();
         float heroWidth = heroSprite.getWidth();
         float heroHeight = heroSprite.getHeight();
 
-        float clampedX = MathUtils.clamp(heroSprite.getX(), 0, worldWidth - heroWidth);
-        float clampedY = MathUtils.clamp(heroSprite.getY(), 0, worldHeight - heroHeight);
+        float clampedX = MathUtils.clamp(heroSprite.getX(), 0, WORLD_WIDTH - heroWidth);
+        float clampedY = MathUtils.clamp(heroSprite.getY(), 0, WORLD_HEIGHT - heroHeight);
 
         hero.getPosition().set(clampedX, clampedY);
         heroSprite.setPosition(clampedX, clampedY);
     }
+
+    private void updateCamera(float delta) {
+
+        // Get player's center position
+        float playerCenterX = heroSprite.getX() + heroSprite.getWidth() / 2f;
+        float playerCenterY = heroSprite.getY() + heroSprite.getHeight() / 2f;
+
+        // Smoothly move camera towards player's center
+        camera.position.x += (playerCenterX - camera.position.x);
+        camera.position.y += (playerCenterY - camera.position.y);
+
+        // Margin settings for world edges
+        float horizontalMargin = 2f; // Horizontal margin
+        float verticalMargin = 2f;   // Vertical margin
+
+        // Half size of camera viewport
+        float cameraHalfWidth = camera.viewportWidth / 2f;
+        float cameraHalfHeight = camera.viewportHeight / 2f;
+
+        // prevent camera moving outside world
+        // The minimum and maximum positions the camera can move to
+        // Margins allow a small extra view beyond world edges
+        float minCameraX = cameraHalfWidth - horizontalMargin;
+        float maxCameraX = WORLD_WIDTH - cameraHalfWidth + horizontalMargin;
+        float minCameraY = cameraHalfHeight - verticalMargin;
+        float maxCameraY = WORLD_HEIGHT - cameraHalfHeight + verticalMargin;
+
+        // Clamp camera position within bounds
+        camera.position.x = MathUtils.clamp(camera.position.x, minCameraX, maxCameraX);
+        camera.position.y = MathUtils.clamp(camera.position.y, minCameraY, maxCameraY);
+
+        // Update camera
+        camera.update();
+    }
+
+
 
     private void draw() {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         viewport.apply();
-        game.batch.setProjectionMatrix(viewport.getCamera().combined);
+        game.batch.setProjectionMatrix(camera.combined);
 
         game.batch.begin();
+
+        // draw background
+        game.batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
         heroSprite.draw(game.batch);
+
         game.batch.end();
     }
 
     @Override
     public void resize(int width, int height) {
-        viewport.update(width, height, true);
+        viewport.update(width, height);
     }
 
-    @Override public void pause() { }
-    @Override public void resume() { }
-    @Override public void hide() { }
+    @Override public void pause() {}
+    @Override public void resume() {}
+    @Override public void hide() {}
 
     @Override
     public void dispose() {
         heroSprite.getTexture().dispose();
+        backgroundTexture.dispose();
     }
 }
