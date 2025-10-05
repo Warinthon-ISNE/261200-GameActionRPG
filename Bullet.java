@@ -2,37 +2,57 @@ package com.ISNE12.project;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class Bullet {
-    private final Texture texture;
-    private final Vector2 position;
-    private final Vector2 velocity;
-    private final float speed = 8f;
-    private final float size = 0.2f;
+    private static final float SPEED = 10f;  // bullet speed
+    private static final float SIZE = 0.2f;  // bullet size in world units
+
+    private Vector2 position;
+    private Vector2 velocity;
+    private boolean active;
+    private Texture texture;
+    private Rectangle bounds;
 
     public Bullet(Texture texture, Vector2 startPos, Vector2 targetPos) {
         this.texture = texture;
         this.position = new Vector2(startPos);
-
-        // Direction = normalized vector toward target
-        Vector2 direction = targetPos.cpy().sub(startPos).nor();
-        this.velocity = direction.scl(speed);
+        this.velocity = new Vector2(targetPos).sub(startPos).nor().scl(SPEED);
+        this.active = true;
+        this.bounds = new Rectangle(position.x, position.y, SIZE, SIZE);
     }
 
     public void update(float delta) {
-        position.mulAdd(velocity, delta);
+        if (!active) return;
+
+        position.x += velocity.x * delta;
+        position.y += velocity.y * delta;
+
+        // Update hitbox
+        bounds.setPosition(position.x, position.y);
+
+        // Remove if offscreen (just in case)
+        if (position.x < -1 || position.x > 10 || position.y < -1 || position.y > 10) {
+            active = false;
+        }
     }
 
     public void render(SpriteBatch batch) {
-        batch.draw(texture, position.x - size / 2f, position.y - size / 2f, size, size);
+        if (active) {
+            batch.draw(texture, position.x, position.y, SIZE, SIZE);
+        }
     }
 
-    public boolean isOutOfBounds(float worldWidth, float worldHeight) {
-        return position.x < 0 || position.x > worldWidth || position.y < 0 || position.y > worldHeight;
+    public boolean isActive() {
+        return active;
     }
 
-    public void dispose() {
-        texture.dispose();
+    public void setActive(boolean value) {
+        this.active = value;
+    }
+
+    public Rectangle getBounds() {
+        return bounds;
     }
 }

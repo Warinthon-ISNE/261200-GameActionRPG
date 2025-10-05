@@ -3,14 +3,17 @@ package com.ISNE12.project;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
 public class GameScreen implements Screen {
@@ -20,42 +23,37 @@ public class GameScreen implements Screen {
     private static final float WORLD_WIDTH = 8f;
     private static final float WORLD_HEIGHT = 5f;
 
-    // Camera and viewport
+    // Cameras and viewports
     private OrthographicCamera camera;
     private FitViewport viewport;
+    private OrthographicCamera hudCamera; // separate camera for HUD
 
-    // Background texture
+    // Background
     private Texture backgroundTexture;
 
-    // Hero sprite sheet and animation frames
+    // Hero animation
     private Texture heroSheet;
     private TextureRegion[][] heroFrames;
-
-    // Animations for each direction
-    private Animation<TextureRegion> animDown;
-    private Animation<TextureRegion> animUp;
-    private Animation<TextureRegion> animSide;
-
-    // visible frame for rendering
+    private Animation<TextureRegion> animDown, animUp, animSide;
     private TextureRegion currentFrame;
-
-    // Timing for animation
     private float stateTime;
 
-    // Hero position and size
-    private float heroX, heroY;
+    // Hero setup
+    private Character hero;
     private float heroWidth = 1f, heroHeight = 1f;
-
-    // Movement speed
     private float speed = 3f;
-
-    // Direction and facing side
     private String direction = "down";
     private boolean facingRight = true;
 
-    // Attack
+    // Enemies
+    private Array<Enemy> enemies;
+    private Texture enemyTexture;
+
+    // Attack system
     private AttackManager attackManager;
 
+    // Font for HUD
+    private BitmapFont font;
 
     public GameScreen(Main game) {
         this.game = game;
@@ -69,94 +67,71 @@ public class GameScreen implements Screen {
         camera.position.set(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, 0);
         camera.update();
 
-        // LOAD BACKGROUND
-        // Put this image inside your assets/ folder
-        backgroundTexture = new Texture("noblehouse01.png");
+        // HUD CAMERA
+        hudCamera = new OrthographicCamera();
+        hudCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        // LOAD HERO SHEET
+        // LOAD TEXTURES
+        backgroundTexture = new Texture("noblehouse01.png");
         heroSheet = new Texture("S__28893189-removebg-preview.png");
 
-        // Split into 4 directions × 3 animation frames
-        heroFrames = TextureRegion.split(
-            heroSheet,
-            heroSheet.getWidth() / 3,   // columns
-            heroSheet.getHeight() / 4   // rows
-        );
-
-        // Create walking animations for each direction
+        // Split hero sheet (4 rows, 3 columns)
+        heroFrames = TextureRegion.split(heroSheet, heroSheet.getWidth() / 3, heroSheet.getHeight() / 4);
         animDown = new Animation<>(0.15f, heroFrames[0]);
         animSide = new Animation<>(0.15f, heroFrames[2]);
         animUp   = new Animation<>(0.15f, heroFrames[3]);
-
-        // Set initial frame and position
         currentFrame = heroFrames[0][1];
-        heroX = 3f;
-        heroY = 2f;
         stateTime = 0f;
+
+        // HERO INIT
+        hero = new Character(100, 10, 2, 3f, 2f);
 
         // ATTACK SYSTEM
         attackManager = new AttackManager();
+
+        // ENEMIES
+        enemies = new Array<>();
+        enemyTexture = new Texture("enemy.png");
+        enemies.add(new Zombie(1f, 1f, hero));
+        enemies.add(new GasbySamSi(7f, 4f, "blue", 2f, hero));
+        enemies.add(new GasbySamSi(2f, 4f, "red", 3f, hero));
+
+        // FONT (white text)
+        font = new BitmapFont();
+        font.setColor(Color.WHITE);
+        font.getData().setScale(1f); // readable screen size
     }
 
     @Override
     public void render(float delta) {
-        handleInput(delta);  // Process player input
-        updateLogic(delta);  // Update hero and camera logic
-        updateAttack(delta); // Update attack
-        draw();              // Render everything
+        handleInput(delta);
+        updateLogic(delta);
+        updateAttack(delta);
+        updateEnemies(delta);
+        draw();
     }
 
-    /** Handle player input (WASD movement and animation switching) */
+    /** Handle hero movement and animation */
     private void handleInput(float delta) {
         float dx = 0, dy = 0;
         boolean moving = false;
 
-        // MOVEMENT INPUT
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-            dy += speed * delta;
-            direction = "up";
-            moving = true;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            dy -= speed * delta;
-            direction = "down";
-            moving = true;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            dx -= speed * delta;
-            direction = "side";
-            facingRight = false;
-            moving = true;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-            dx += speed * delta;
-            direction = "side";
-            facingRight = true;
-            moving = true;
-        }
+        if (Gdx.input.isKeyPressed(Input.Keys.W)) { dy += speed * delta; direction = "up"; moving = true; }
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) { dy -= speed * delta; direction = "down"; moving = true; }
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) { dx -= speed * delta; direction = "side"; facingRight = false; moving = true; }
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) { dx += speed * delta; direction = "side"; facingRight = true; moving = true; }
 
-        // Update hero position
-        heroX += dx;
-        heroY += dy;
-
-        // Increase animation time
+        hero.move(dx, dy);
         stateTime += delta;
 
-        // ANIMATION SELECTION
+        // Animate
         if (moving) {
             switch (direction) {
-                case "up":
-                    currentFrame = animUp.getKeyFrame(stateTime, true);
-                    break;
-                case "down":
-                    currentFrame = animDown.getKeyFrame(stateTime, true);
-                    break;
-                case "side":
-                    currentFrame = animSide.getKeyFrame(stateTime, true);
-                    break;
+                case "up": currentFrame = animUp.getKeyFrame(stateTime, true); break;
+                case "down": currentFrame = animDown.getKeyFrame(stateTime, true); break;
+                case "side": currentFrame = animSide.getKeyFrame(stateTime, true); break;
             }
         } else {
-            // Idle
             switch (direction) {
                 case "up": currentFrame = heroFrames[3][1]; break;
                 case "down": currentFrame = heroFrames[0][1]; break;
@@ -164,69 +139,77 @@ public class GameScreen implements Screen {
             }
         }
 
-        // FLIP SPRITE WHEN FACING LEFT
-        if ((facingRight && currentFrame.isFlipX()) || (!facingRight && !currentFrame.isFlipX())) {
+        if ((facingRight && currentFrame.isFlipX()) || (!facingRight && !currentFrame.isFlipX()))
             currentFrame.flip(true, false);
+    }
+
+    /** Camera and world logic */
+    private void updateLogic(float delta) {
+        Vector2 pos = hero.getPosition();
+        pos.x = MathUtils.clamp(pos.x, 0, WORLD_WIDTH - heroWidth);
+        pos.y = MathUtils.clamp(pos.y, 0, WORLD_HEIGHT - heroHeight);
+
+        camera.position.lerp(new com.badlogic.gdx.math.Vector3(pos.x + heroWidth / 2f, pos.y + heroHeight / 2f, 0), 0.1f);
+        camera.update();
+    }
+
+    /** Update attacks & bullets */
+    private void updateAttack(float delta) {
+        Vector2 heroCenter = new Vector2(hero.getPosition().x + heroWidth / 2f, hero.getPosition().y + heroHeight / 2f);
+        Vector2 mouseWorld = viewport.unproject(new Vector2(Gdx.input.getX(), Gdx.input.getY()));
+        attackManager.update(delta, heroCenter, mouseWorld);
+
+        // Check bullet collisions
+        for (Bullet bullet : attackManager.getBullets()) {
+            for (Enemy e : enemies) {
+                if (!e.isDead() && bullet.getBounds().overlaps(e.getBounds())) {
+                    e.gotDamage(hero.getAttack());
+                    bullet.setActive(false);
+                    if (e.isDead()) hero.addKill();
+                }
+            }
         }
     }
 
-    /** Keep hero inside world and move camera smoothly */
-    private void updateLogic(float delta) {
-        // Prevent hero from moving off-screen
-        heroX = MathUtils.clamp(heroX, 0, WORLD_WIDTH - heroWidth);
-        heroY = MathUtils.clamp(heroY, 0, WORLD_HEIGHT - heroHeight);
-
-        // Make camera smoothly follow hero
-        camera.position.lerp(
-            new com.badlogic.gdx.math.Vector3(
-                heroX + heroWidth / 2f,
-                heroY + heroHeight / 2f,
-                0),
-            0.1f
-        );
-        camera.update();
-    }
-    /** Handle shooting and bullet updates */
-    private void updateAttack(float delta) {
-        // hero center in world coordinates
-        float heroCenterX = heroX + heroWidth / 2f;
-        float heroCenterY = heroY + heroHeight / 2f;
-        Vector2 heroCenter = new Vector2(heroCenterX, heroCenterY);
-
-        // convert mouse screen → world coordinates
-        Vector2 mouseScreen = new Vector2(Gdx.input.getX(), Gdx.input.getY());
-        Vector2 mouseWorld = viewport.unproject(new Vector2(mouseScreen));
-
-        attackManager.update(delta, heroCenter, mouseWorld);
+    /** Update enemy movement and cleanup */
+    private void updateEnemies(float delta) {
+        for (Enemy e : enemies) e.update(delta);
+        for (int i = enemies.size - 1; i >= 0; i--) {
+            if (enemies.get(i).isDead()) enemies.removeIndex(i);
+        }
     }
 
-    /** Draw background and hero */
+    /** Draw everything (world + HUD) */
     private void draw() {
-        // Clear the screen
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Apply viewport and camera transform
         viewport.apply();
         SpriteBatch batch = game.batch;
+
+        // --- World rendering ---
         batch.setProjectionMatrix(camera.combined);
-
         batch.begin();
-        // Draw the background (fills entire world area)
         batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-
-        // Draw the current hero animation frame
-        batch.draw(currentFrame, heroX, heroY, heroWidth, heroHeight);
-
-        // Draw bullets
+        batch.draw(currentFrame, hero.getPosition().x, hero.getPosition().y, heroWidth, heroHeight);
+        for (Enemy e : enemies)
+            batch.draw(enemyTexture, e.getPosition().x, e.getPosition().y, 1f, 1f);
         attackManager.render(batch);
+        batch.end();
 
+        // --- HUD rendering (fixed to screen) ---
+        batch.setProjectionMatrix(hudCamera.combined);
+        batch.begin();
+        font.setColor(Color.WHITE);
+        font.draw(batch, "HP: " + hero.getHp() + "/" + hero.getMaxHp(), 20, Gdx.graphics.getHeight() - 20);
+        font.draw(batch, "Kills: " + hero.getKills(), 20, Gdx.graphics.getHeight() - 50);
         batch.end();
     }
 
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
+        hudCamera.setToOrtho(false, width, height);
     }
 
     @Override public void pause() {}
@@ -237,6 +220,8 @@ public class GameScreen implements Screen {
     public void dispose() {
         backgroundTexture.dispose();
         heroSheet.dispose();
+        enemyTexture.dispose();
         attackManager.dispose();
+        font.dispose();
     }
 }

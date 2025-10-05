@@ -8,44 +8,47 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 
 public class AttackManager {
-    private final Array<Bullet> bullets;
-    private final Texture bulletTexture;
-
-    private float shootCooldown = 0.25f; // seconds between shots
-    private float timeSinceLastShot = 0f;
+    private Texture bulletTexture;
+    private Array<Bullet> bullets;
+    private float fireRate = 0.3f;  // time between shots
+    private float fireTimer = 0f;
 
     public AttackManager() {
+        bulletTexture = new Texture("bullet.png");
         bullets = new Array<>();
-        bulletTexture = new Texture("bullet.png"); // bullet image in assets
     }
 
-    public void update(float delta, Vector2 heroCenter, Vector2 mouseWorldPos) {
-        timeSinceLastShot += delta;
+    public void update(float delta, Vector2 heroPos, Vector2 targetPos) {
+        fireTimer += delta;
 
-        // Left click to shoot
-        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT) && timeSinceLastShot >= shootCooldown) {
-            shoot(heroCenter, mouseWorldPos);
-            timeSinceLastShot = 0f;
+        // Shoot with left click or spacebar
+        if ((Gdx.input.isButtonPressed(Input.Buttons.LEFT) || Gdx.input.isKeyPressed(Input.Keys.SPACE))
+            && fireTimer >= fireRate) {
+            fireTimer = 0f;
+            bullets.add(new Bullet(bulletTexture, heroPos, targetPos));
         }
 
-        // Update bullets and remove if out of bounds
-        for (int i = bullets.size - 1; i >= 0; i--) {
-            Bullet b = bullets.get(i);
+        // Update all bullets
+        for (Bullet b : bullets) {
             b.update(delta);
-            if (b.isOutOfBounds(8f, 5f)) { // same as world size
+        }
+
+        // Remove inactive bullets safely
+        for (int i = bullets.size - 1; i >= 0; i--) {
+            if (!bullets.get(i).isActive()) {
                 bullets.removeIndex(i);
             }
         }
-    }
-
-    private void shoot(Vector2 heroCenter, Vector2 mouseWorldPos) {
-        bullets.add(new Bullet(bulletTexture, heroCenter, mouseWorldPos));
     }
 
     public void render(SpriteBatch batch) {
         for (Bullet b : bullets) {
             b.render(batch);
         }
+    }
+
+    public Array<Bullet> getBullets() {
+        return bullets;
     }
 
     public void dispose() {
