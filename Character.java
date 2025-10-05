@@ -60,9 +60,7 @@ public class Character {
     public void attack(Character target) {
         target.takeDamage(this.attack);
     }
-
-
-
+    
     public boolean isAlive() {
         return hp > 0;
     }
