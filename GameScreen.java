@@ -7,10 +7,8 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
@@ -23,22 +21,15 @@ public class GameScreen implements Screen {
     private static final float WORLD_WIDTH = 8f;
     private static final float WORLD_HEIGHT = 5f;
 
-    // Cameras and viewports
+    // Cameras
     private OrthographicCamera camera;
     private FitViewport viewport;
-    private OrthographicCamera hudCamera; // separate camera for HUD
+    private OrthographicCamera hudCamera;
 
     // Background
     private Texture backgroundTexture;
 
-    // Hero animation
-    private Texture heroSheet;
-    private TextureRegion[][] heroFrames;
-    private Animation<TextureRegion> animDown, animUp, animSide;
-    private TextureRegion currentFrame;
-    private float stateTime;
-
-    // Hero setup
+    // Hero
     private Character hero;
     private float heroWidth = 1f, heroHeight = 1f;
     private float speed = 3f;
@@ -73,18 +64,9 @@ public class GameScreen implements Screen {
 
         // LOAD TEXTURES
         backgroundTexture = new Texture("noblehouse01.png");
-        heroSheet = new Texture("S__28893189-removebg-preview.png");
 
-        // Split hero sheet (4 rows, 3 columns)
-        heroFrames = TextureRegion.split(heroSheet, heroSheet.getWidth() / 3, heroSheet.getHeight() / 4);
-        animDown = new Animation<>(0.15f, heroFrames[0]);
-        animSide = new Animation<>(0.15f, heroFrames[2]);
-        animUp   = new Animation<>(0.15f, heroFrames[3]);
-        currentFrame = heroFrames[0][1];
-        stateTime = 0f;
-
-        // HERO INIT
-        hero = new Character(100, 10, 2, 3f, 2f);
+        // HERO INIT — use your first playable hero
+        hero = new Goose(3f, 2f);
 
         // ATTACK SYSTEM
         attackManager = new AttackManager();
@@ -99,7 +81,7 @@ public class GameScreen implements Screen {
         // FONT (white text)
         font = new BitmapFont();
         font.setColor(Color.WHITE);
-        font.getData().setScale(1f); // readable screen size
+        font.getData().setScale(1f);
     }
 
     @Override
@@ -122,29 +104,13 @@ public class GameScreen implements Screen {
         if (Gdx.input.isKeyPressed(Input.Keys.D)) { dx += speed * delta; direction = "side"; facingRight = true; moving = true; }
 
         hero.move(dx, dy);
-        stateTime += delta;
-
-        // Animate
-        if (moving) {
-            switch (direction) {
-                case "up": currentFrame = animUp.getKeyFrame(stateTime, true); break;
-                case "down": currentFrame = animDown.getKeyFrame(stateTime, true); break;
-                case "side": currentFrame = animSide.getKeyFrame(stateTime, true); break;
-            }
-        } else {
-            switch (direction) {
-                case "up": currentFrame = heroFrames[3][1]; break;
-                case "down": currentFrame = heroFrames[0][1]; break;
-                case "side": currentFrame = heroFrames[2][1]; break;
-            }
-        }
-
-        if ((facingRight && currentFrame.isFlipX()) || (!facingRight && !currentFrame.isFlipX()))
-            currentFrame.flip(true, false);
+        hero.updateAnimation(delta, moving, direction, facingRight); // 👈 NEW: delegate animation logic
     }
 
     /** Camera and world logic */
     private void updateLogic(float delta) {
+        hero.applyPassive(); // apply passive effects each frame
+
         Vector2 pos = hero.getPosition();
         pos.x = MathUtils.clamp(pos.x, 0, WORLD_WIDTH - heroWidth);
         pos.y = MathUtils.clamp(pos.y, 0, WORLD_HEIGHT - heroHeight);
@@ -191,16 +157,15 @@ public class GameScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-        batch.draw(currentFrame, hero.getPosition().x, hero.getPosition().y, heroWidth, heroHeight);
+        batch.draw(hero.getCurrentFrame(), hero.getPosition().x, hero.getPosition().y, heroWidth, heroHeight); // 👈 now from hero class
         for (Enemy e : enemies)
             batch.draw(enemyTexture, e.getPosition().x, e.getPosition().y, 1f, 1f);
         attackManager.render(batch);
         batch.end();
 
-        // --- HUD rendering (fixed to screen) ---
+        // --- HUD rendering ---
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
-        font.setColor(Color.WHITE);
         font.draw(batch, "HP: " + hero.getHp() + "/" + hero.getMaxHp(), 20, Gdx.graphics.getHeight() - 20);
         font.draw(batch, "Kills: " + hero.getKills(), 20, Gdx.graphics.getHeight() - 50);
         batch.end();
@@ -219,7 +184,6 @@ public class GameScreen implements Screen {
     @Override
     public void dispose() {
         backgroundTexture.dispose();
-        heroSheet.dispose();
         enemyTexture.dispose();
         attackManager.dispose();
         font.dispose();

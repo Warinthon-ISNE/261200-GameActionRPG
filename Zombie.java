@@ -4,7 +4,7 @@ public class Zombie extends Enemy {
 
     // zombie class base stat
     public Zombie(float x, float y, Character target) {
-        super(x, y, new EnemyStat(10, 10, 0), 10, target); // base stats
+        super(x, y, new EnemyStat(10, 10, 0), 1, target); // base stats
     }
 
     @Override

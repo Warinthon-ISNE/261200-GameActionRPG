@@ -1,22 +1,27 @@
 package com.ISNE12.project;
 
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 
-public class Character {
+public abstract class Character {
     // --- Combat Stats ---
-    private int hp;
-    private int maxHp;
-    private int attack;
-    private int defense;
+    protected int hp;
+    protected int maxHp;
+    protected int attack;
+    protected int defense;
 
     // --- Position & Movement ---
-    private Vector2 position;
+    protected Vector2 position;
 
     // --- Player Tracking ---
-    private int kills;
-    private int stamina;
-    private int maxStamina;
+    protected int kills;
+    protected int stamina;
+    protected int maxStamina;
 
+    // --- Animation Timing ---
+    protected float stateTime = 0f;
+
+    // --- Constructor ---
     public Character(int hp, int attack, int defense, float startX, float startY) {
         this.hp = hp;
         this.maxHp = hp;
@@ -50,10 +55,7 @@ public class Character {
         target.takeDamage(this.attack);
     }
 
-    // --- Player Tracking Logic ---
-    public void addKill() {
-        kills++;
-    }
+    public void addKill() { kills++; }
 
     public void useStamina(int amount) {
         stamina -= amount;
@@ -65,6 +67,14 @@ public class Character {
         if (stamina > maxStamina) stamina = maxStamina;
     }
 
+    // --- Animation hooks ---
+    public abstract void updateAnimation(float delta, boolean moving, String direction, boolean facingRight);
+    public abstract TextureRegion getCurrentFrame();
+
+    // --- Passive / Ability hooks ---
+    public abstract void applyPassive();
+    public abstract void useSpecialAbility();
+
     // --- Getters ---
     public int getHp() { return hp; }
     public int getMaxHp() { return maxHp; }
@@ -74,8 +84,6 @@ public class Character {
     public int getKills() { return kills; }
     public int getStamina() { return stamina; }
     public int getMaxStamina() { return maxStamina; }
-
-    public boolean isAlive() {
-        return hp > 0;
-    }
+    public boolean isAlive() { return hp > 0; }
 }
+
