@@ -7,9 +7,9 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public abstract class Enemy {
     // Enemy Stats 
-    protected int HP;
+    protected int HP, maxHP;
+    protected int DEF, maxDEF;
     protected int ATK;
-    protected int DEF;
 
     protected Vector2 position;//direction x,y
     protected float speed;
@@ -74,7 +74,6 @@ public abstract class Enemy {
                 updateDeathAnimation();
                 break;
         }
-
         bounds.setPosition(position.x, position.y);
     }
 
@@ -153,10 +152,35 @@ public abstract class Enemy {
         batch.draw(currentFrame, position.x, position.y);
     }
 
+    public void enemyBar(ShapeRenderer shapeRenderer){
+        float Width = 40f;
+        float Height = 5f;
+        float x = position.x - Width / 2;
+        float y = position.y + 50f; //above Enemy's head
+
+        shapeRenderer.setColor(Color.DARK_GRAY); //background
+        shapeRenderer.rect(x - 1, y - 1, Width + 2, Height + 2);
+
+        //DEF bar (front)
+        shapeRenderer.setColor(Color.WHITE);
+        shapeRenderer.rect(x, y, Width * getHpPercent(), Height);
+
+        //HP bar (behind)
+        shapeRenderer.setColor(Color.RED);
+        shapeRenderer.rect(x, y, Width * getDefPercent(), Height);
+    }
+
     //takeDamage
     public void gotDamage(int damage) {
-        int finalDamage = Math.max(0, damage - DEF);
-        HP -= finalDamage;
+        if (DEF > 0) {
+            DEF -= damage;
+            if (DEF < 0) {
+                HP += DEF; // if DEF < 0, decrease HP
+                DEF = 0;
+            }
+        } else {
+            HP -= damage;
+        }
 
         if (HP <= 0 && !isDead) {
             die();
@@ -203,5 +227,11 @@ public abstract class Enemy {
     }
     public int getDEF() {
         return DEF;
+    }
+    public float getHpPercent() {
+        return (float) HP / maxHP;
+    }
+    public float getDefPercent() {
+        return (float) DEF / maxDEF;
     }
 }
