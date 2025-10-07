@@ -1,21 +1,29 @@
-package ISNE.lab.preGame.Entities;
-
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
-public class Enemy {
+public abstract class Enemy {
+    // Enemy Stats 
+    protected int HP;
+    protected int ATK;
+    protected int DEF;
+
     protected Vector2 position;//direction x,y
     protected float speed;
-    protected EnemyStat stat;
     protected Character target;
-
-    protected EnemyState state;
-    protected EnemyFacing facing;
-    protected boolean isDead = false; //check died
+    protected boolean isDead = false;
     protected boolean Dying = false;
-    protected float timer = 0f;
+    protected float deathTimer = 0f;
+    protected float bodyRemove = 3f;
+    protected Rectangle bounds;
+
+    //Enemy state
+    protected EnemyState state = EnemyState.WALK;
+    protected EnemyFacing facing;
+    protected float stateTime = 0f;
 
     //Animation loop, walk direction + other idle
     protected TextureRegion currentFrame; //current state
@@ -28,16 +36,27 @@ public class Enemy {
     protected Animation<TextureRegion> deathAnimation;
 
     //constructor
-    public Enemy(float x, float y, EnemyStat stat, float speed, Character target){
-        this.position = new Vector2(x, y); //may be random spawn
-        this.stat = stat;
+    public Enemy(float x, float y, int HP, int ATK, int DEF, float speed, Character target){
+        this.position = new Vector2(x, y); //may random spawn
+        this.HP = HP;
+        this.ATK = ATK;
+        this.DEF = DEF;
         this.speed = speed;
         this.target = target;
+        this.bounds = new Rectangle(x, y, 1f, 1f); // default enemy size
     }
     public void update(float delta) {
-        if (isDead) return;
+        stateTime += delta;
 
-        timer += delta;
+        if (isDead) {
+            updateDeathAnimation();
+            deathTimer += delta;
+            if (deathTimer >= bodyRemove) {
+                dispose(); // mark for removal
+            }
+            return;
+        }
+
         aiming(delta);
         updateDirection();
 
@@ -55,19 +74,23 @@ public class Enemy {
                 updateDeathAnimation();
                 break;
         }
+
+        bounds.setPosition(position.x, position.y);
     }
-    
-    protected void aiming (float delta) {
+
+    // --- Move toward target ---
+    protected void aiming(float delta) {
         if (target == null) return;
 
         float dx = target.getPosition().x - position.x;
         float dy = target.getPosition().y - position.y;
         float distance = (float) Math.sqrt(dx * dx + dy * dy);
 
-        if (distance > 1f) {
+        if (distance > 0.1f) { // move closer
             position.x += (dx / distance) * speed * delta;
             position.y += (dy / distance) * speed * delta;
-        }else {
+            setState(EnemyState.WALK);
+        } else {
             setState(EnemyState.ATTACK);
         }
     }
@@ -79,49 +102,50 @@ public class Enemy {
         float dy = target.getPosition().y - position.y;
 
         if (Math.abs(dx) > Math.abs(dy)) {
-            facing = (dx > 0) ? facing.RIGHT : facing.LEFT;
+            facing = (dx > 0) ? EnemyFacing.RIGHT : EnemyFacing.LEFT;
         } else {
-            facing = (dy > 0) ? facing.UP : facing.DOWN;
+            facing = (dy > 0) ? EnemyFacing.UP : EnemyFacing.DOWN;
         }
     }
 
     protected void updateWalkAnimation() {
         switch (facing) {
             case UP:
-                currentFrame = walkUp.getKeyFrame(timer, true);
+                currentFrame = walkUp != null ? walkUp.getKeyFrame(stateTime, true) : currentFrame;
                 break;
             case DOWN:
-                currentFrame = walkDown.getKeyFrame(timer, true);
+                currentFrame = walkDown != null ? walkDown.getKeyFrame(stateTime, true) : currentFrame;
                 break;
             case LEFT:
-                currentFrame = walkLeft.getKeyFrame(timer, true);
+                currentFrame = walkLeft != null ? walkLeft.getKeyFrame(stateTime, true) : currentFrame;
                 break;
             case RIGHT:
-                currentFrame = walkRight.getKeyFrame(timer, true);
+                currentFrame = walkRight != null ? walkRight.getKeyFrame(stateTime, true) : currentFrame;
                 break;
         }
     }
 
     protected void updateAttackAnimation() {
-        currentFrame = attackAnimation.getKeyFrame(timer, false);
-        if (attackAnimation.isAnimationFinished(timer)) {
-            state = EnemyState.WALK;
-            timer = 0f;
+        if (attackAnimation == null) return;
+        currentFrame = attackAnimation.getKeyFrame(stateTime, false);
+        if (attackAnimation.isAnimationFinished(stateTime)) {
+            setState(EnemyState.WALK);
         }
     }
 
     protected void updateDamagedAnimation() {
-        currentFrame = damagedAnimation.getKeyFrame(timer, false);
-        if (damagedAnimation.isAnimationFinished(timer)) {
-            state = EnemyState.WALK;
-            timer = 0f;
+        if (damagedAnimation == null) return;
+        currentFrame = damagedAnimation.getKeyFrame(stateTime, false);
+        if (damagedAnimation.isAnimationFinished(stateTime)) {
+            setState(EnemyState.WALK);
         }
     }
 
     protected void updateDeathAnimation() {
-        currentFrame = deathAnimation.getKeyFrame(timer, false);
-        if (deathAnimation.isAnimationFinished(timer)) {
-            dispose();
+        if (deathAnimation == null) return;
+        currentFrame = deathAnimation.getKeyFrame(stateTime, false);
+        if (deathAnimation.isAnimationFinished(stateTime)) {
+            dispose(); // removed from array
         }
     }
 
@@ -130,9 +154,11 @@ public class Enemy {
     }
 
     //takeDamage
-    public void gotDamage(int damage){
-        stat.gotDamage(damage);
-        if (stat.getHP() <= 0 && !isDead) {
+    public void gotDamage(int damage) {
+        int finalDamage = Math.max(0, damage - DEF);
+        HP -= finalDamage;
+
+        if (HP <= 0 && !isDead) {
             die();
         } else {
             setState(EnemyState.DAMAGED);
@@ -142,14 +168,14 @@ public class Enemy {
     protected void setState(EnemyState newState) {
         if (state != newState) {
             state = newState;
-            timer = 0f;
+            stateTime = 0f;
         }
     }
 
     protected void die() {
         isDead = true;
-        state = EnemyState.DEAD;
-        timer = 0f;
+        deathTimer = 0f;
+        setState(EnemyState.DEAD);
     }
 
     public boolean isDying() {
@@ -169,7 +195,13 @@ public class Enemy {
         return position;
     }
 
-    public EnemyStat getStat() {
-        return stat;
+    public int getHP() {
+        return HP;
+    }
+    public int getATK() {
+        return ATK;
+    }
+    public int getDEF() {
+        return DEF;
     }
 }
