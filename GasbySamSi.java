@@ -1,78 +1,83 @@
-package ISNE.lab.preGame.Entities;
-
-import static com.badlogic.gdx.math.MathUtils.random;
+import java.util.Random;
 
 public class GasbySamSi extends Enemy {
-    public GasbySamSi(float x, float y, String color, int speed, Character target){
-        super(x, y, new EnemyStat(getHP(color),getATK(color),getDEF(color)), 30, target);
+    private String color;
+    private Random random = new Random();
+
+    public GasbySamSi(float x, float y, String color, Character target) {
+        super(x, y, getHP(color), getATK(color), getDEF(color), 30f, target);
+        this.color = color.toLowerCase();
     }
     //We have 3 different type of Gasby -- Red, Blue & Purple
-
     //update Stat bt each color
     private static int getHP(String color){
-        switch(color){
-            case "blue" : return 30; //normal Gasby -> BlueGasby
-            case "red" : return 30; //RedGasby, fast gasby
-            case "Purple" : return 60; //purpleGasby, more Def & HP
+        switch (color.toLowerCase()) {
+            case "blue": return 30;
+            case "red": return 30;
+            case "purple": return 60;
             default: return 30;
         }
     }
     private static int getATK(String color){
-        switch(color){
+        switch (color.toLowerCase()) {
             case "blue" : return 10; //normal Gasby -> BlueGasby
-            case "red" : return 20; //RedGasby, Damage dealer gasby
-            case "Purple" : return 10; //purpleGasby, more Def & HP
+            case "red" : return 25; //RedGasby, Damage dealer gasby
+            case "purple" : return 20; //purpleGasby, more Def & HP
             default: return 10;
         }
     }
     private static int getDEF(String color){
-        switch(color){
+        switch (color.toLowerCase()) {
             case "blue" : return 20;
             case "red" : return 20;
-            case "Purple" : return 30;
+            case "purple" : return 30;
             default: return 20;
         }
     }
 
     /*
-    //for idea of this Enemy, each different color will give s.th of Character, after they're died
-    //the red one gain Character HP x% from total (random chance)
-    //purple will give Character DEF (random chance)
+    for idea of this Enemy, each different color will give s.th of Character, after they're died
+    the red one gain Character HP x% from total (random chance)
+    purple will give Character DEF (random chance 50% -- random number between 1-100)/*
+     */
+    
     @Override
     protected void die(){
         super.die();
-        drop();
+        drop(this.color);
     }
 
-    private void drop(){
-        int dropChance = random.nextInt(100); //from 100%
-        if() blueGasby = not drop anything
-        else if() redGasby = drop Character Hp x% of total by chance 50-100%
-        else if() purpleGasby = drop Character DEF y% of total by chance 60-100%
+    private void drop(String color){
+        int dropChance = random.nextInt(100);
+        switch (color.toLowerCase()) {
+            case "blue": //don't drop anything
+                break;
 
-        check Chance for each,
-        using (random.nextInt(100) //each time after Gasby has been slain, random 0 to 100
-        //for red, chance 50 to 100 -> don't be random less than 50
-        if(random.nextInt(100) >= 50){
-            heal(); //use in Character
-        }
-        //for purple, chance 60 to 100 -> don't be random less than 40
-        if(random.nextInt(100) >= 40){
-            gainDEF(); //use in Character
+            case "red":
+                if (dropChance > 50) {
+                    heal(); //use in Character
+                }
+                break;
+
+            case "purple":
+                if (dropChance > 50) {
+                    gainDEF(); //use in Character
+                }
+                break;
         }
     }
 
     private void heal(){
-        int healAmount = //calculate maxHP * x;
+        int healAmount = (int) (target.getMaxHp() * 0.05f); //5% OF maxhp
         target.heal(healAmount);
-
-        //future may be add texture HP bar for Character and Enemy
+        System.out.println("Player healed by " + healAmount + " from Red Gasby drop!");
     }
     private void gainDEF() {
-        int armor = //calculate maxDEF * x;
-        target.gainDEF(armor);
+        int defAmount = (int) (target.getMaxDEF() * 0.10f); //10% OF maxDEF
+        target.gainDEF(defAmount);
+        System.out.println("Player gained +" + defAmount + " DEF from Purple Gasby drop!");
     }
-*/
+
     @Override
     public void update(float delta){
         super.update(delta);
