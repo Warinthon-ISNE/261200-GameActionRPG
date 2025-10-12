@@ -1,24 +1,30 @@
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import java.lang.Character;
-/*import class zombie, Enemy, GasbySamSi*/
+
+/*import all enemy type here!!*/
 
 public class EnemySpawner {
     private Array<Enemy> enemies;
     private float worldWidth, worldHeight;
     public Character target;
 
-    // Spawn control
-    private static final float SAVEZONE_RANGE = 15f;  // limits enemy spawn area (far from Character 15*15)
+    private static final float SAVEZONE_RANGE = 12f;
     private float spawnTimer = 0f;
-    private float spawnInterval = 1.5f;
+    private float spawnInterval = 3f;
 
-    // Monster wave
     private int currentWave = 1;
     private float timeSinceLastWave = 0f;
-    private float nextWaveDelay = MathUtils.random(40f, 60f); // random delay for next wave
-    private float warningTime = 5f;  // Show "Monster Wave Coming in 5 seconds" before the wave starts
+    private float nextWaveDelay = MathUtils.random(40f, 60f);
+    private float warningTime = 5f;
     private boolean showWaveWarning = false;
+    
+    // --- for surprising wave condision ---
+    boolean EmergencyCall = false;
+    boolean surpriseWaveTriggered = false;
+    private int waveFiveEnemies; //all spawned enemy in wave 5
+    private int killStack = 0; //Character kill stack in wave 5
 
     public EnemySpawner(Array<Enemy> enemies, Character target, float worldWidth, float worldHeight) {
         this.enemies = enemies;
@@ -31,49 +37,68 @@ public class EnemySpawner {
         spawnTimer += delta;
         timeSinceLastWave += delta;
 
-            // Trigger wave after time elapsed
-            if (timeSinceLastWave >= nextWaveDelay) {
-                showWaveWarning = true;  // Show wave warning
-                spawnWave();
-                currentWave++;
-                timeSinceLastWave = 0f;
-                nextWaveDelay = MathUtils.random(35f, 50f);  // Randomize next wave delay
-            }
+        // Regular spawn
+        if (spawnTimer >= spawnInterval) {
+            spawnEnemy();
+            spawnTimer = 0f;
+        }
 
-            // Show "Monster Wave coming" message
-            if (showWaveWarning) {
-                if (timeSinceLastWave >= nextWaveDelay - warningTime) {
-                    System.out.println("Monster Wave coming! Prepare yourself.");
+        // Wave trigger
+        if (timeSinceLastWave >= nextWaveDelay) {
+            showWaveWarning = true;
+            spawnWave();
+            currentWave++;
+            timeSinceLastWave = 0f;
+            nextWaveDelay = MathUtils.random(35f, 50f);
+        }
+
+        if (showWaveWarning && timeSinceLastWave >= nextWaveDelay - warningTime) {
+            System.out.println("Monster Wave coming! Prepare yourself.");
+        }
+
+        // Emergency support spawn
+        spawnEmergency();
+
+        // Update all enemies
+        for (Enemy e : enemies) {
+            e.update(delta);
+        }
+
+        // Clean dead enemies
+        for (int i = enemies.size - 1; i >= 0; i--) {
+            if (enemies.get(i).isDying()) {
+                if(currentWave == 5){
+                    killStack++;  // Increment when an enemy dies
                 }
+                enemies.removeIndex(i);
             }
-            // Regular enemy spawn (1-3 enemies every time)
-            if (spawnTimer >= spawnInterval) {
-                spawnEnemy();
-                spawnTimer = 0f;  // Reset timer after spawning enemies
-            }
-            // Update all enemies
-            for (Enemy e : enemies) {
-                e.update(delta);
-            }
+        }
+
+        // Check for Surprise Wave condition in wave 5
+        if (currentWave == 5 && !surpriseWaveTriggered && killStack >= waveFiveEnemies * 0.7 && target.getHpPercent() >= 0.4f && !EmergencyCall) {
+            triggerSurpriseWave();
+        }
     }
 
-    // Generate random enemies for the regular spawn
-    private void spawnEnemy() {
-        int numEnemies = MathUtils.random(1, 3); // spawn 1-3 enemies each time
+    private void spawnEnemy() { //not in monster wave
+        int numEnemies = MathUtils.random(1, 3);
         for (int i = 0; i < numEnemies; i++) {
-            Enemy e = generateRandomEnemy(0);  // 0 represents normal case
+            Enemy e = generateRandomEnemy(currentWave);
+            setSafeSpawnPosition(e);
             enemies.add(e);
         }
     }
 
-    //wave starts
     private void spawnWave() {
-        // Number of enemies to spawn based on wave
         int numEnemies = MathUtils.random(10, 20);  // spawn 10-20 enemies per wave
 
         // Add enemies based on wave type
         for (int i = 0; i < numEnemies; i++) {
             Enemy e = generateRandomEnemy(currentWave);
+            setSafeSpawnPosition(e);
+            if(currentWave == 5){
+                waveFiveEnemies++;
+            }
             enemies.add(e);
         }
 
@@ -83,22 +108,44 @@ public class EnemySpawner {
 
     private Enemy generateRandomEnemy(int wave) {
         Enemy newEnemy = null;
+        int type;
 
-        // Wave spawning logic
         if (wave == 1) {
-            newEnemy = new Zombie(0, 0, 50, 10, 20, 20, target);  // Zombie only
+            // Wave 1: Only Zombie
+            type = MathUtils.random(0, 4);
+            if (type <= 3) {
+                newEnemy = new Zombie(0, 0, 50, 10, 5, 10, target);
+            } else {
+                newEnemy = new GasbySamSi(0, 0, "blue", target);
+            }
+
         } else if (wave == 2) {
-            newEnemy = MathUtils.random(0, 1) == 0 ? new Zombie(0, 0, 50, 10, 20, 20, target) : new GasbySamSi(0, 0, "blue", target);
+            type = MathUtils.random(0, 3);
+            if (type <= 2) newEnemy = new Zombie(0, 0, 50, 10, 5, 10, target);
+            else newEnemy = new GasbySamSi(0, 0, "blue", target);
+
         } else if (wave == 3) {
-            newEnemy = MathUtils.random(0, 1) == 0 ? new Zombie(0, 0, 50, 10, 20, 30, target) : new GasbySamSi(0, 0, "blue", target) :
-            new GasbySamSi(0, 0, "red", target);
+            // Wave 3: Introduce Red Gasby
+            type = MathUtils.random(0, 4);
+            if (type == 0) newEnemy = new GasbySamSi(0, 0, "red", target);
+            else if (type == 1) newEnemy = new GasbySamSi(0, 0, "blue", target);
+            else newEnemy = new Zombie(0, 0, 60, 15, 10, 12, target);
+
         } else if (wave == 4) {
             // Wave 4: A mix of everything
-            newEnemy = MathUtils.random(0, 1) == 0 ? new Zombie(0, 0, 50, 10, 20, 20, target) : new GasbySamSi(0, 0, "blue", target)
-                : new GasbySamSi(0, 0, "red", target) : new GasbySamSi(0, 0, "purple", target);
+            type = MathUtils.random(0, 5);
+            if (type == 0) newEnemy = new GasbySamSi(0, 0, "purple", target);
+            else if (type == 1) newEnemy = new GasbySamSi(0, 0, "red", target);
+            else if (type == 2) newEnemy = new GasbySamSi(0, 0, "blue", target);
+            else newEnemy = new Zombie(0, 0, 60, 15, 10, 20, target);
+
         } else {
             // Wave 5: A mix of everything and some surprises
-            newEnemy = MathUtils.random(0, 1) == 0 ? new Zombie(0, 0, 50, 10, 20, 30, target) : new GasbySamSi(0, 0, "blue", target) : new GasbySamSi(0, 0, "red", target) : new GasbySamSi(0, 0, "purple", target);
+            type = MathUtils.random(0, 6);
+            if (type == 0) newEnemy = new GasbySamSi(0, 0, "purple", target);
+            else if (type <= 2) newEnemy = new GasbySamSi(0, 0, "red", target);
+            else if (type <= 4) newEnemy = new GasbySamSi(0, 0, "blue", target);
+            else newEnemy = new Zombie(0, 0, 100, 20, 12, 20, target);
         }
 
         // Random spawn location (spawn away from the player)
@@ -109,15 +156,34 @@ public class EnemySpawner {
         return newEnemy;
     }
 
-    // Helper spawn: Red Gasbie when Player HP <= 30%
+    private void triggerSurpriseWave() {
+        System.out.println("Surprise wave coming! Get ready!");
+        int numEnemies = MathUtils.random(15, 25);  // Spawn more enemies in surprise wave
+
+        for (int i = 0; i < numEnemies; i++) {
+            Enemy e = generateRandomEnemy(5);  // Wave 5 enemies
+            enemies.add(e);
+        }
+        surpriseWaveTriggered = true;  // Mark that the surprise wave was triggered
+    }
+
     private void spawnEmergency() {
         if (target.getHpPercent() < 0.3f && spawnTimer >= spawnInterval) {
-            spawnEmergency();
+            Enemy redGasby = new GasbySamSi(0, 0, "red", target);
+            setSafeSpawnPosition(redGasby);
+            enemies.add(redGasby);
             spawnTimer = 0f;
+            EmergencyCall = true;
         }
-        // Add Red Gasbie to help the player
-        Enemy redGasby = new GasbySamSi(0, 0, "red", target);
-        enemies.add(redGasby);
+    }
+
+    private void setSafeSpawnPosition(Enemy enemy) {
+        float x, y;
+        do {
+            x = MathUtils.random(0f, worldWidth);
+            y = MathUtils.random(0f, worldHeight);
+        } while (Vector2.dst(x, y, target.getPosition().x, target.getPosition().y) < SAVEZONE_RANGE);
+        enemy.setPosition(x, y);
     }
 
     // Getter methods
