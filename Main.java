@@ -1,4 +1,4 @@
-package com.ISNE12.project;
+package ISNE12.project;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -12,8 +12,8 @@ public class Main extends Game {
     public void create() {
         batch = new SpriteBatch();
 
-        // Start directly in the GameScreen
-        setScreen(new GameScreen(this));
+        // Start with Character Selection Screen instead of directly to game
+        setScreen(new CharacterSelectionScreen(this));
     }
 
     @Override

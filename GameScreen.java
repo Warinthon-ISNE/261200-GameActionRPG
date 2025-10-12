@@ -1,4 +1,4 @@
-package com.ISNE12.project;
+package ISNE12.project;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -31,6 +31,7 @@ public class GameScreen implements Screen {
 
     // Hero
     private Character hero;
+    private String selectedCharacter; // Store which character was selected
     private float heroWidth = 1f, heroHeight = 1f;
     private float speed = 3f;
     private String direction = "down";
@@ -46,8 +47,9 @@ public class GameScreen implements Screen {
     // Font for HUD
     private BitmapFont font;
 
-    public GameScreen(Main game) {
+    public GameScreen(Main game, String characterType) {
         this.game = game;
+        this.selectedCharacter = characterType;  // ✅ SAVE THE CHARACTER TYPE
     }
 
     @Override
@@ -65,11 +67,21 @@ public class GameScreen implements Screen {
         // LOAD TEXTURES
         backgroundTexture = new Texture("noblehouse01.png");
 
-        // HERO INIT — use your first playable hero
-        hero = new Goose(3f, 2f);
+        // HERO INIT - based on selected character
+        if (selectedCharacter.equals("goose")) {
+            hero = new Goose(3f, 2f);
+            speed = 3f;
+        } else if (selectedCharacter.equals("giraffe")) {
+            hero = new Giraffe(3f, 2f);
+            speed = 2.5f; // Giraffe is slightly slower
+        } else {
+            // Default to Goose
+            hero = new Goose(3f, 2f);
+            selectedCharacter = "goose";
+        }
 
-        // ATTACK SYSTEM
-        attackManager = new AttackManager();
+        // ATTACK SYSTEM - passes character type
+        attackManager = new AttackManager(selectedCharacter);
 
         // ENEMIES
         enemies = new Array<>();
@@ -104,12 +116,12 @@ public class GameScreen implements Screen {
         if (Gdx.input.isKeyPressed(Input.Keys.D)) { dx += speed * delta; direction = "side"; facingRight = true; moving = true; }
 
         hero.move(dx, dy);
-        hero.updateAnimation(delta, moving, direction, facingRight); // 👈 NEW: delegate animation logic
+        hero.updateAnimation(delta, moving, direction, facingRight);
     }
 
     /** Camera and world logic */
     private void updateLogic(float delta) {
-        hero.applyPassive(); // apply passive effects each frame
+        hero.applyPassive();
 
         Vector2 pos = hero.getPosition();
         pos.x = MathUtils.clamp(pos.x, 0, WORLD_WIDTH - heroWidth);
@@ -123,7 +135,7 @@ public class GameScreen implements Screen {
     private void updateAttack(float delta) {
         Vector2 heroCenter = new Vector2(hero.getPosition().x + heroWidth / 2f, hero.getPosition().y + heroHeight / 2f);
         Vector2 mouseWorld = viewport.unproject(new Vector2(Gdx.input.getX(), Gdx.input.getY()));
-        attackManager.update(delta, heroCenter, mouseWorld);
+        attackManager.update(delta, heroCenter, mouseWorld, hero); // Pass hero reference
 
         // Check bullet collisions
         for (Bullet bullet : attackManager.getBullets()) {
@@ -157,7 +169,7 @@ public class GameScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-        batch.draw(hero.getCurrentFrame(), hero.getPosition().x, hero.getPosition().y, heroWidth, heroHeight); // 👈 now from hero class
+        batch.draw(hero.getCurrentFrame(), hero.getPosition().x, hero.getPosition().y, heroWidth, heroHeight);
         for (Enemy e : enemies)
             batch.draw(enemyTexture, e.getPosition().x, e.getPosition().y, 1f, 1f);
         attackManager.render(batch);
@@ -166,8 +178,10 @@ public class GameScreen implements Screen {
         // --- HUD rendering ---
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
-        font.draw(batch, "HP: " + hero.getHp() + "/" + hero.getMaxHp(), 20, Gdx.graphics.getHeight() - 20);
-        font.draw(batch, "Kills: " + hero.getKills(), 20, Gdx.graphics.getHeight() - 50);
+        font.draw(batch, "Character: " + selectedCharacter.toUpperCase(), 20, Gdx.graphics.getHeight() - 20);
+        font.draw(batch, "HP: " + hero.getHp() + "/" + hero.getMaxHp(), 20, Gdx.graphics.getHeight() - 45);
+        font.draw(batch, "ATK: " + hero.getAttack() + " | DEF: " + hero.getDefense(), 20, Gdx.graphics.getHeight() - 70);
+        font.draw(batch, "Kills: " + hero.getKills(), 20, Gdx.graphics.getHeight() - 95);
         batch.end();
     }
 

@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
-public class Goose extends Character {
+public class Giraffe extends Character {
 
     private Texture heroSheet;
     private TextureRegion[][] frames;
@@ -12,9 +12,11 @@ public class Goose extends Character {
     private TextureRegion currentFrame;
     private boolean facingRight = true;
 
-    public Goose(float startX, float startY) {
-        super(150, 8, 5, startX, startY);
-        heroSheet = new Texture("goose.png");
+    public Giraffe(float startX, float startY) {
+        super(100, 15, 3, startX, startY); // Lower HP, Higher ATK, Lower DEF
+
+        // Use giraffe sprite sheet
+        heroSheet = new Texture("giraffe.png"); // 👈 PUT YOUR GIRAFFE PNG FILE HERE
         frames = TextureRegion.split(heroSheet, heroSheet.getWidth() / 3, heroSheet.getHeight() / 4);
 
         animDown = new Animation<>(0.15f, frames[0]);
@@ -29,7 +31,6 @@ public class Goose extends Character {
         this.stateTime += delta;
         this.facingRight = facingRight;
 
-        // เลือก animation ตามทิศทาง
         if (moving) {
             switch (direction) {
                 case "up": currentFrame = animUp.getKeyFrame(stateTime, true); break;
@@ -44,7 +45,6 @@ public class Goose extends Character {
             }
         }
 
-        // หมุนภาพ (flip) ให้หันไปทางที่ถูกต้อง
         if (facingRight && !currentFrame.isFlipX()) {
             currentFrame.flip(true, false);
         } else if (!facingRight && currentFrame.isFlipX()) {
@@ -59,12 +59,16 @@ public class Goose extends Character {
 
     @Override
     public void applyPassive() {
-        if (getHp() < getMaxHp()) heal(1);
+        // Mage passive: Increase attack every 5 seconds
+        if (stateTime % 5 < 0.016f) { // roughly every 5 seconds
+            setAttack(getAttack() + 1);
+        }
     }
 
     @Override
     public void useSpecialAbility() {
-        setDefense(getDefense() + 5);
-        System.out.println("HeroA used defense buff!");
+        // Mage special: Temporary massive attack boost
+        setAttack(getAttack() + 10);
+        System.out.println("Mage used Magic Burst! ATK boosted!");
     }
 }

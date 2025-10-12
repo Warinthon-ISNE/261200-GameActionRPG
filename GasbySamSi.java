@@ -1,4 +1,4 @@
-package com.ISNE12.project;
+package ISNE12.project;
 
 import static com.badlogic.gdx.math.MathUtils.random;
 
