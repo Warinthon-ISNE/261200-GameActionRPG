@@ -18,3 +18,9 @@ ex.
     enemies.spawn(new //s.th() Math.random * <ScreenWidth>, Math.random * <ScreenLength>, Character)
   }
   then update it using delta or s.th
+
+# Enemy type
+
+  Zombie = normal melee type enemy
+  GasbySamSi (red and blue) can make decision to choose way to attack -- Gasby pretend to attack by poltergeist (7*7 or lesser) first but it can also using dash attack (4*4 or lesser && have any more that 3 other gasby surround)
+  and the last type, purpleGasby only dash attack in range 4*4 or lesser
