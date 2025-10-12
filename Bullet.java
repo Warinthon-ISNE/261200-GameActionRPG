@@ -1,4 +1,4 @@
-package com.ISNE12.project;
+package ISNE12.project;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;

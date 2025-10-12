@@ -1,27 +1,18 @@
-package com.ISNE12.project;
+package ISNE12.project;
 
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Vector2;
 
-public abstract class Character {
-    // --- Combat Stats ---
+public class Character {
     protected int hp;
     protected int maxHp;
     protected int attack;
     protected int defense;
-
-    // --- Position & Movement ---
-    protected Vector2 position;
-
-    // --- Player Tracking ---
     protected int kills;
-    protected int stamina;
-    protected int maxStamina;
-
-    // --- Animation Timing ---
+    protected Vector2 position;
     protected float stateTime = 0f;
 
-    // --- Constructor ---
     public Character(int hp, int attack, int defense, float startX, float startY) {
         this.hp = hp;
         this.maxHp = hp;
@@ -29,61 +20,57 @@ public abstract class Character {
         this.defense = defense;
         this.position = new Vector2(startX, startY);
         this.kills = 0;
-        this.maxStamina = 100;
-        this.stamina = maxStamina;
     }
 
-    // --- Movement ---
+    public int getHp() { return hp; }
+    public int getAttack() { return attack; }
+    public int getDefense() { return defense; }
+    public int getMaxHp() { return maxHp; }
+    public int getKills() { return kills; }
+    public Vector2 getPosition() { return position; }
+
     public void move(float dx, float dy) {
         position.add(dx, dy);
     }
 
-    // --- Combat Logic ---
-    public void takeDamage(int damage) {
-        int reduced = damage - defense;
-        if (reduced < 0) reduced = 0;
-        hp -= reduced;
-        if (hp < 0) hp = 0;
-    }
+    public void setHp(int hp) { this.hp = Math.min(hp, maxHp); }
+    public void setAttack(int attack) { this.attack = attack; }
+    public void setDefense(int defense) { this.defense = defense; }
 
+    // ฟังก์ชันรักษา (heal)
     public void heal(int amount) {
         hp += amount;
         if (hp > maxHp) hp = maxHp;
     }
 
+    // ฟังก์ชันโจมตี
     public void attack(Character target) {
         target.takeDamage(this.attack);
+        if (!target.isAlive()) {
+            addKill();
+        }
     }
 
-    public void addKill() { kills++; }
-
-    public void useStamina(int amount) {
-        stamina -= amount;
-        if (stamina < 0) stamina = 0;
+    // ฟังก์ชันรับดาเมจ
+    public void takeDamage(int damage) {
+        int reducedDamage = damage - defense;
+        if (reducedDamage < 0) reducedDamage = 0;
+        hp -= reducedDamage;
+        if (hp < 0) hp = 0;
     }
 
-    public void recoverStamina(int amount) {
-        stamina += amount;
-        if (stamina > maxStamina) stamina = maxStamina;
+    public boolean isAlive() {
+        return hp > 0;
     }
 
-    // --- Animation hooks ---
-    public abstract void updateAnimation(float delta, boolean moving, String direction, boolean facingRight);
-    public abstract TextureRegion getCurrentFrame();
+    public void addKill() {
+        kills++;
+    }
 
-    // --- Passive / Ability hooks ---
-    public abstract void applyPassive();
-    public abstract void useSpecialAbility();
+    // Virtual methods (override ได้ใน subclass)
+    public void updateAnimation(float delta, boolean moving, String direction, boolean facingRight) {}
+    public void applyPassive() {}
+    public void useSpecialAbility() {}
 
-    // --- Getters ---
-    public int getHp() { return hp; }
-    public int getMaxHp() { return maxHp; }
-    public int getAttack() { return attack; }
-    public int getDefense() { return defense; }
-    public Vector2 getPosition() { return position; }
-    public int getKills() { return kills; }
-    public int getStamina() { return stamina; }
-    public int getMaxStamina() { return maxStamina; }
-    public boolean isAlive() { return hp > 0; }
+    public TextureRegion getCurrentFrame() { return null; }
 }
-
