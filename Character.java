@@ -20,7 +20,19 @@ public abstract class Character {
 
     // --- Animation Timing ---
     protected float stateTime = 0f;
+    
+    // from enemy sync dynamic -> get buff and debuff for a while
+    protected float speed;       // current speed (affected by debuff)
+    protected float baseSpeed;   // default speed (for reset after debuff)
 
+    protected float speedDebuffPercent = 0f;
+    protected float attackDebuffPercent = 0f;
+    protected float defenseDebuffPercent = 0f;
+
+    protected float speedDebuffTimer = 0f;
+    protected float attackDebuffTimer = 0f;
+    protected float defenseDebuffTimer = 0f;
+    
     // --- Constructor ---
     public Character(int hp, int attack, int defense, float startX, float startY) {
         this.hp = hp;
@@ -66,7 +78,54 @@ public abstract class Character {
         stamina += amount;
         if (stamina > maxStamina) stamina = maxStamina;
     }
+    
+// Adding to sync Enemy logic and skills
+    public void gainDEF(int amount) {
+        defense += amount;
+    }
+    
+    public void decreaseSpeed(float percent, float duration) {
+        speedDebuffPercent += percent;
+        speedDebuffTimer = Math.max(speedDebuffTimer, duration);
+        updateDebuffedStats();
+    }
 
+    public void decreaseAttack(float percent, float duration) {
+        attackDebuffPercent += percent;
+        attackDebuffTimer = Math.max(attackDebuffTimer, duration);
+        updateDebuffedStats();
+    }
+
+    public void decreaseDefense(float percent, float duration) {
+        defenseDebuffPercent += percent;
+        defenseDebuffTimer = Math.max(defenseDebuffTimer, duration);
+        updateDebuffedStats();
+    }
+
+    private void updateDebuffedStats() {
+        speed = baseSpeed * (1f - speedDebuffPercent);
+        attack = (int) (attack * (1f - attackDebuffPercent));
+        defense = (int) (defense * (1f - defenseDebuffPercent));
+    }
+
+    private void resetDebuff() {
+        speedDebuffPercent = 0;
+        attackDebuffPercent = 0;
+        defenseDebuffPercent = 0;
+        speed = baseSpeed;
+    }
+
+    public void update(float delta) {
+        if (!isAlive()) return;
+
+        if (speedDebuffTimer > 0) speedDebuffTimer -= delta;
+        if (attackDebuffTimer > 0) attackDebuffTimer -= delta;
+        if (defenseDebuffTimer > 0) defenseDebuffTimer -= delta;
+
+        if (speedDebuffTimer <= 0 && attackDebuffTimer <= 0 && defenseDebuffTimer <= 0) {
+            resetDebuff();
+        }
+    }
     // --- Animation hooks ---
     public abstract void updateAnimation(float delta, boolean moving, String direction, boolean facingRight);
     public abstract TextureRegion getCurrentFrame();
