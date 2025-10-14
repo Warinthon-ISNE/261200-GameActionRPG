@@ -19,12 +19,12 @@ public class EnemySpawner {
     private float nextWaveDelay = MathUtils.random(40f, 60f);
     private float warningTime = 5f;
     private boolean showWaveWarning = false;
-    
-    // --- for surprising wave condision ---
+
+    // --- for surprising wave condision (after wave 4) ---
     boolean EmergencyCall = false;
     boolean surpriseWaveTriggered = false;
-    private int waveFiveEnemies; //all spawned enemy in wave 5
-    private int killStack = 0; //Character kill stack in wave 5
+    private int waveFourEnemies; //all spawned enemy in wave 4
+    private int killStack = 0; //Character kill stack in wave 4
 
     public EnemySpawner(Array<Enemy> enemies, Character target, float worldWidth, float worldHeight) {
         this.enemies = enemies;
@@ -67,7 +67,7 @@ public class EnemySpawner {
         // Clean dead enemies
         for (int i = enemies.size - 1; i >= 0; i--) {
             if (enemies.get(i).isDying()) {
-                if(currentWave == 5){
+                if(currentWave == 3){
                     killStack++;  // Increment when an enemy dies
                 }
                 enemies.removeIndex(i);
@@ -75,7 +75,7 @@ public class EnemySpawner {
         }
 
         // Check for Surprise Wave condition in wave 5
-        if (currentWave == 5 && !surpriseWaveTriggered && killStack >= waveFiveEnemies * 0.7 && target.getHpPercent() >= 0.4f && !EmergencyCall) {
+        if (currentWave == 4 && !surpriseWaveTriggered && killStack >= waveFourEnemies * 0.7 && target.getHpPercent() >= 0.4f && !EmergencyCall) {
             triggerSurpriseWave();
         }
     }
@@ -96,8 +96,8 @@ public class EnemySpawner {
         for (int i = 0; i < numEnemies; i++) {
             Enemy e = generateRandomEnemy(currentWave);
             setSafeSpawnPosition(e);
-            if(currentWave == 5){
-                waveFiveEnemies++;
+            if(currentWave == 4){
+                waveFourEnemies++;
             }
             enemies.add(e);
         }
@@ -111,41 +111,34 @@ public class EnemySpawner {
         int type;
 
         if (wave == 1) {
-            // Wave 1: Only Zombie
-            type = MathUtils.random(0, 4);
-            if (type <= 3) {
-                newEnemy = new Zombie(0, 0, 50, 10, 5, 10, target);
-            } else {
-                newEnemy = new GasbySamSi(0, 0, "blue", target);
-            }
+            newEnemy = new Zombie(0, 0, 50, 10, 5, 10, target);
 
         } else if (wave == 2) {
-            type = MathUtils.random(0, 3);
-            if (type <= 2) newEnemy = new Zombie(0, 0, 50, 10, 5, 10, target);
-            else newEnemy = new GasbySamSi(0, 0, "blue", target);
-
-        } else if (wave == 3) {
             // Wave 3: Introduce Red Gasby
-            type = MathUtils.random(0, 4);
+            type = MathUtils.random(0, 5);
             if (type == 0) newEnemy = new GasbySamSi(0, 0, "red", target);
-            else if (type == 1) newEnemy = new GasbySamSi(0, 0, "blue", target);
+            else if (type == 1 || type == 2) newEnemy = new GasbySamSi(0, 0, "blue", target);
             else newEnemy = new Zombie(0, 0, 60, 15, 10, 12, target);
 
+        } else if (wave == 3) {
+            // Wave 4: A mix of everything
+            type = MathUtils.random(0, 6);
+            if (type == 1 || type == 4) newEnemy = new GasbySamSi(0, 0, "red", target);
+            else if (type == 1 || type == 2 || type == 3) newEnemy = new GasbySamSi(0, 0, "blue", target);
+            else newEnemy = new Zombie(0, 0, 60, 15, 10, 20, target);
         } else if (wave == 4) {
             // Wave 4: A mix of everything
-            type = MathUtils.random(0, 5);
-            if (type == 0) newEnemy = new GasbySamSi(0, 0, "purple", target);
-            else if (type == 1) newEnemy = new GasbySamSi(0, 0, "red", target);
-            else if (type == 2) newEnemy = new GasbySamSi(0, 0, "blue", target);
+            type = MathUtils.random(0, 10);
+            if (type == 1 || type == 5) newEnemy = new GasbySamSi(0, 0, "red", target);
+            else if (type <= 5) newEnemy = new GasbySamSi(0, 0, "blue", target);
             else newEnemy = new Zombie(0, 0, 60, 15, 10, 20, target);
 
         } else {
             // Wave 5: A mix of everything and some surprises
-            type = MathUtils.random(0, 6);
-            if (type == 0) newEnemy = new GasbySamSi(0, 0, "purple", target);
-            else if (type <= 2) newEnemy = new GasbySamSi(0, 0, "red", target);
-            else if (type <= 4) newEnemy = new GasbySamSi(0, 0, "blue", target);
-            else newEnemy = new Zombie(0, 0, 100, 20, 12, 20, target);
+            type = MathUtils.random(0, 10);
+            if (type <= 4) newEnemy = new GasbySamSi(0, 0, "red", target);
+            else if (type <= 5) newEnemy = new GasbySamSi(0, 0, "blue", target);
+            else if (type >= 3 && type <= 10) newEnemy = new Zombie(0, 0, 100, 20, 12, 20, target);
         }
 
         // Random spawn location (spawn away from the player)
