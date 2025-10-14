@@ -6,9 +6,8 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public abstract class Enemy {
-    // Enemy Stats 
+    // Enemy Stats
     protected int HP, maxHP;
-    protected int DEF, maxDEF;
     protected int ATK;
 
     protected Vector2 position;//direction x,y
@@ -36,11 +35,10 @@ public abstract class Enemy {
     protected Animation<TextureRegion> deathAnimation;
 
     //constructor
-    public Enemy(float x, float y, int HP, int ATK, int DEF, float speed, Character target){
+    public Enemy(float x, float y, int HP, int ATK, float speed, Character target){
         this.position = new Vector2(x, y); //may random spawn
         this.HP = HP;
         this.ATK = ATK;
-        this.DEF = DEF;
         this.speed = speed;
         this.target = target;
         this.bounds = new Rectangle(x, y, 1f, 1f); // default enemy size
@@ -74,6 +72,7 @@ public abstract class Enemy {
                 updateDeathAnimation();
                 break;
         }
+
         bounds.setPosition(position.x, position.y);
     }
 
@@ -156,31 +155,19 @@ public abstract class Enemy {
         float Width = 40f;
         float Height = 5f;
         float x = position.x - Width / 2;
-        float y = position.y + 50f; //above Enemy's head
+        float y = position.y + 50f;
 
         shapeRenderer.setColor(Color.DARK_GRAY); //background
         shapeRenderer.rect(x - 1, y - 1, Width + 2, Height + 2);
 
-        //DEF bar (front)
-        shapeRenderer.setColor(Color.WHITE);
-        shapeRenderer.rect(x, y, Width * getHpPercent(), Height);
-
-        //HP bar (behind)
+        //HP bar
         shapeRenderer.setColor(Color.RED);
-        shapeRenderer.rect(x, y, Width * getDefPercent(), Height);
+        shapeRenderer.rect(x, y, Width * getHpPercent(), Height);
     }
 
     //takeDamage
     public void gotDamage(int damage) {
-        if (DEF > 0) {
-            DEF -= damage;
-            if (DEF < 0) {
-                HP += DEF; // if DEF < 0, decrease HP
-                DEF = 0;
-            }
-        } else {
-            HP -= damage;
-        }
+        HP -= damage;
 
         if (HP <= 0 && !isDead) {
             die();
@@ -222,16 +209,17 @@ public abstract class Enemy {
     public int getHP() {
         return HP;
     }
+
     public int getATK() {
         return ATK;
     }
-    public int getDEF() {
-        return DEF;
-    }
+
     public float getHpPercent() {
         return (float) HP / maxHP;
     }
-    public float getDefPercent() {
-        return (float) DEF / maxDEF;
+
+    //setter
+    public void setPosition(float x, float y){
+        this.position.set(x, y);
     }
 }
