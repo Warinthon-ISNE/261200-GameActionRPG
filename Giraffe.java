@@ -5,10 +5,10 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 /**
- * Goose — gains additional bullets every 5 kills (up to 4 total).
- * Uses goose_bullet.png.
+ * Giraffe — gains attack speed every 5 kills, capped at max.
+ * Uses giraffe_bullet.png.
  */
-public class Goose extends Character {
+public class Giraffe extends Character {
 
     private Texture heroSheet;
     private TextureRegion[][] frames;
@@ -19,19 +19,18 @@ public class Goose extends Character {
 
     // Passive tracking
     private int lastKillThreshold = 0;
-    private int extraShots = 0;
-    private final int maxExtraShots = 3;
+    private final float maxAttackSpeed = 3.0f;
 
-    public Goose(float startX, float startY) {
-        super(150, 8, 5, startX, startY);
-        this.attackSpeed = 2.0f; // 2 shots per second
+    public Giraffe(float startX, float startY) {
+        super(200, 10, 8, startX, startY);
+        this.attackSpeed = 1.0f;
 
-        heroSheet = new Texture("goose.png");
+        heroSheet = new Texture("giraffe.png");
         frames = TextureRegion.split(heroSheet, heroSheet.getWidth() / 3, heroSheet.getHeight() / 4);
 
-        animDown = new Animation<>(0.15f, frames[0]);
-        animSide = new Animation<>(0.15f, frames[1]);
-        animUp   = new Animation<>(0.15f, frames[3]);
+        animDown = new Animation<>(0.2f, frames[0]);
+        animSide = new Animation<>(0.2f, frames[1]);
+        animUp   = new Animation<>(0.2f, frames[3]);
 
         currentFrame = frames[0][1];
     }
@@ -60,40 +59,35 @@ public class Goose extends Character {
     }
 
     @Override
-    public TextureRegion getCurrentFrame() {
-        return currentFrame;
-    }
+    public TextureRegion getCurrentFrame() { return currentFrame; }
 
     @Override
     public void applyPassive() {
         int currentThreshold = kills / 5;
         if (currentThreshold > lastKillThreshold) {
             lastKillThreshold = currentThreshold;
-            increaseExtraShots();
+            increaseAttackSpeed();
         }
     }
 
-    private void increaseExtraShots() {
-        if (extraShots < maxExtraShots) {
-            extraShots++;
-            System.out.println("Goose Multishot increased! (" + (extraShots + 1) + " total bullets)");
+    private void increaseAttackSpeed() {
+        if (attackSpeed < maxAttackSpeed) {
+            attackSpeed += 0.3f;
+            if (attackSpeed > maxAttackSpeed) attackSpeed = maxAttackSpeed;
+            System.out.println("Giraffe's attack speed increased! Current: " + attackSpeed + "x");
         }
     }
-
-    public int getExtraShots() { return extraShots; }
 
     @Override
     public void useSpecialAbility() {
-        defense += 5;
-        System.out.println("Goose used Feather Shield!");
+        attack += 5;
+        System.out.println("Giraffe used Power Stomp!");
     }
 
     @Override
     public String getBulletTexturePath() {
-        return "bullet.png"; // 👈 unique bullet
+        return "magic_bullet.png";
     }
 
-    public void dispose() {
-        heroSheet.dispose();
-    }
+    public void dispose() { heroSheet.dispose(); }
 }

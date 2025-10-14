@@ -1,89 +1,60 @@
 package com.ISNE12.project;
 
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public abstract class Character {
-    // --- Combat Stats ---
-    protected int hp;
     protected int maxHp;
+    protected int hp;
     protected int attack;
     protected int defense;
-
-    // --- Position & Movement ---
     protected Vector2 position;
-
-    // --- Player Tracking ---
     protected int kills;
-    protected int stamina;
-    protected int maxStamina;
 
-    // --- Animation Timing ---
-    protected float stateTime = 0f;
+    // Attack speed system
+    protected float attackSpeed = 1f;
+    protected float attackCooldown = 0f;
 
-    // --- Constructor ---
-    public Character(int hp, int attack, int defense, float startX, float startY) {
-        this.hp = hp;
-        this.maxHp = hp;
+    public Character(int maxHp, int attack, int defense, float startX, float startY) {
+        this.maxHp = maxHp;
+        this.hp = maxHp;
         this.attack = attack;
         this.defense = defense;
         this.position = new Vector2(startX, startY);
         this.kills = 0;
-        this.maxStamina = 100;
-        this.stamina = maxStamina;
     }
 
-    // --- Movement ---
     public void move(float dx, float dy) {
         position.add(dx, dy);
     }
 
-    // --- Combat Logic ---
+    public Vector2 getPosition() { return position; }
+    public int getHp() { return hp; }
+    public int getMaxHp() { return maxHp; }
+    public int getAttack() { return attack; }
+    public int getKills() { return kills; }
+    public void addKill() { kills++; }
+
+    // === Attack speed logic ===
+    public boolean canAttack() { return attackCooldown <= 0f; }
+    public void resetAttackCooldown() { attackCooldown = 1f / attackSpeed; }
+    public void updateCooldown(float delta) { if (attackCooldown > 0) attackCooldown -= delta; }
+
+    // === HP logic ===
     public void takeDamage(int damage) {
-        int reduced = damage - defense;
-        if (reduced < 0) reduced = 0;
-        hp -= reduced;
+        int actual = Math.max(0, damage - defense);
+        hp -= actual;
         if (hp < 0) hp = 0;
     }
 
     public void heal(int amount) {
-        hp += amount;
-        if (hp > maxHp) hp = maxHp;
+        hp = Math.min(maxHp, hp + amount);
     }
 
-    public void attack(Character target) {
-        target.takeDamage(this.attack);
-    }
-
-    public void addKill() { kills++; }
-
-    public void useStamina(int amount) {
-        stamina -= amount;
-        if (stamina < 0) stamina = 0;
-    }
-
-    public void recoverStamina(int amount) {
-        stamina += amount;
-        if (stamina > maxStamina) stamina = maxStamina;
-    }
-
-    // --- Animation hooks ---
+    // === Abstract methods ===
     public abstract void updateAnimation(float delta, boolean moving, String direction, boolean facingRight);
     public abstract TextureRegion getCurrentFrame();
-
-    // --- Passive / Ability hooks ---
     public abstract void applyPassive();
     public abstract void useSpecialAbility();
-
-    // --- Getters ---
-    public int getHp() { return hp; }
-    public int getMaxHp() { return maxHp; }
-    public int getAttack() { return attack; }
-    public int getDefense() { return defense; }
-    public Vector2 getPosition() { return position; }
-    public int getKills() { return kills; }
-    public int getStamina() { return stamina; }
-    public int getMaxStamina() { return maxStamina; }
-    public boolean isAlive() { return hp > 0; }
+    public abstract String getBulletTexturePath(); // 👈 NEW METHOD
 }
-

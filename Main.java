@@ -3,8 +3,7 @@ package com.ISNE12.project;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
-
+/** Main entry point for the game */
 public class Main extends Game {
     public SpriteBatch batch;
 
@@ -12,8 +11,8 @@ public class Main extends Game {
     public void create() {
         batch = new SpriteBatch();
 
-        // Start directly in the GameScreen
-        setScreen(new GameScreen(this));
+        // ✅ Start with Character Selection Screen
+        setScreen(new CharacterSelectionScreen(this));
     }
 
     @Override
