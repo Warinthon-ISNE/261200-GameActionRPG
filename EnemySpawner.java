@@ -121,10 +121,10 @@ public class EnemySpawner {
             else newEnemy = new Zombie(0, 0, 60, 15, 10, 12, target);
 
         } else if (wave == 3) {
-            // Wave 4: A mix of everything
+            // Wave 3
             type = MathUtils.random(0, 6);
             if (type == 1 || type == 4) newEnemy = new GasbySamSi(0, 0, "red", target);
-            else if (type == 1 || type == 2 || type == 3) newEnemy = new GasbySamSi(0, 0, "blue", target);
+            else if (type == 1 || type == 3) newEnemy = new GasbySamSi(0, 0, "blue", target);
             else newEnemy = new Zombie(0, 0, 60, 15, 10, 20, target);
         } else if (wave == 4) {
             // Wave 4: A mix of everything
@@ -134,7 +134,7 @@ public class EnemySpawner {
             else newEnemy = new Zombie(0, 0, 60, 15, 10, 20, target);
 
         } else {
-            // Wave 5: A mix of everything and some surprises
+            // Wave 4(+1): A mix of everything and some surprises
             type = MathUtils.random(0, 10);
             if (type <= 4) newEnemy = new GasbySamSi(0, 0, "red", target);
             else if (type <= 5) newEnemy = new GasbySamSi(0, 0, "blue", target);
