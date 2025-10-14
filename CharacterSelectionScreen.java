@@ -1,6 +1,7 @@
 package com.ISNE12.project;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -10,28 +11,33 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class CharacterSelectionScreen implements Screen {
     final Main game;
     private OrthographicCamera camera;
+    private Viewport viewport;
     private SpriteBatch batch;
     private BitmapFont font;
 
     // Character preview textures
     private Texture goosePreview;
-    private Texture magePreview;  // Add your second character texture
+    private Texture giraffePreview;
     private Texture backgroundTexture;
 
     // Selection boxes
     private Rectangle gooseBox;
-    private Rectangle mageBox;
+    private Rectangle giraffeBox;
 
     // UI dimensions
+    private static final float WORLD_WIDTH = 1280f;
+    private static final float WORLD_HEIGHT = 720f;
     private static final float BOX_WIDTH = 200;
     private static final float BOX_HEIGHT = 250;
-    private static final float SPACING = 50;
+    private static final float SPACING = 100;
 
-    // Selected character (-1 = none, 0 = goose, 1 = mage, etc.)
+    // Hovered / selected
     private int hoveredChar = -1;
 
     public CharacterSelectionScreen(Main game) {
@@ -40,36 +46,30 @@ public class CharacterSelectionScreen implements Screen {
 
     @Override
     public void show() {
+        // CAMERA + VIEWPORT
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 800, 480);
+        viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
+        viewport.apply();
+        camera.position.set(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, 0);
+        camera.update();
+
         batch = game.batch;
 
         font = new BitmapFont();
         font.setColor(Color.WHITE);
         font.getData().setScale(2f);
 
-        // Load character preview images
+        // Load images
         goosePreview = new Texture("goose1.png");
-        magePreview = new Texture("giraffe.png"); // Replace with your mage texture
+        giraffePreview = new Texture("giraffe.png");
         backgroundTexture = new Texture("background.jpg");
 
-        // Setup selection boxes (centered on screen)
-        float centerX = 400;
-        float centerY = 240;
+        // Setup selection boxes
+        float centerX = WORLD_WIDTH / 2f;
+        float centerY = WORLD_HEIGHT / 2f;
 
-        gooseBox = new Rectangle(
-            centerX - BOX_WIDTH - SPACING/2,
-            centerY - BOX_HEIGHT/2,
-            BOX_WIDTH,
-            BOX_HEIGHT
-        );
-
-        mageBox = new Rectangle(
-            centerX + SPACING/2,
-            centerY - BOX_HEIGHT/2,
-            BOX_WIDTH,
-            BOX_HEIGHT
-        );
+        gooseBox = new Rectangle(centerX - BOX_WIDTH - SPACING / 2, centerY - BOX_HEIGHT / 2, BOX_WIDTH, BOX_HEIGHT);
+        giraffeBox = new Rectangle(centerX + SPACING / 2, centerY - BOX_HEIGHT / 2, BOX_WIDTH, BOX_HEIGHT);
     }
 
     @Override
@@ -79,26 +79,21 @@ public class CharacterSelectionScreen implements Screen {
     }
 
     private void handleInput() {
-        Vector3 touchPos = new Vector3();
-        touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
-        camera.unproject(touchPos);
+        Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        viewport.unproject(touchPos);
 
-        // Check hover
         hoveredChar = -1;
         if (gooseBox.contains(touchPos.x, touchPos.y)) {
             hoveredChar = 0;
-        } else if (mageBox.contains(touchPos.x, touchPos.y)) {
+        } else if (giraffeBox.contains(touchPos.x, touchPos.y)) {
             hoveredChar = 1;
         }
 
-        // Check click
         if (Gdx.input.justTouched()) {
             if (hoveredChar == 0) {
-                // Selected Goose
                 game.setScreen(new GameScreen(game, "goose"));
                 dispose();
             } else if (hoveredChar == 1) {
-                // Selected Mage
                 game.setScreen(new GameScreen(game, "giraffe"));
                 dispose();
             }
@@ -114,67 +109,67 @@ public class CharacterSelectionScreen implements Screen {
 
         batch.begin();
 
-        // Background
-        batch.draw(backgroundTexture, 0, 0, 800, 480);
+        // Draw background scaled to fit screen
+        batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
         // Title
-        font.draw(batch, "SELECT YOUR CHARACTER", 200, 450);
+        font.draw(batch, "SELECT YOUR CHARACTER", WORLD_WIDTH / 2f - 300, WORLD_HEIGHT - 60);
 
-        // Draw Goose box
-        drawCharacterBox(gooseBox, goosePreview, "GOOSE", hoveredChar == 0);
-        font.getData().setScale(1f);
-        font.draw(batch, "HP: 150  ATK: 8  DEF: 5", gooseBox.x + 10, gooseBox.y - 10);
-        font.draw(batch, "Ability: Rapid Fire", gooseBox.x + 10, gooseBox.y - 30);
+        // Draw character boxes (no text inside)
+        drawCharacterBox(gooseBox, goosePreview, hoveredChar == 0);
+        drawCharacterBox(giraffeBox, giraffePreview, hoveredChar == 1);
+
+        // === Draw Names Separately ===
         font.getData().setScale(2f);
 
-        // Draw Mage box
-        drawCharacterBox(mageBox, magePreview, "GIRAFFE", hoveredChar == 1);
+        // Goose name (adjust horizontally until centered)
+        font.draw(batch, "GOOSE", gooseBox.x + 50, gooseBox.y + gooseBox.height);
+
+        // Giraffe name (already looks centered, so leave default)
+        font.draw(batch, "GIRAFFE", giraffeBox.x + 40, giraffeBox.y + giraffeBox.height);
+
+        // === Character Stats ===
         font.getData().setScale(1f);
-        font.draw(batch, "HP: 100  ATK: 15  DEF: 3", mageBox.x + 10, mageBox.y - 10);
-        font.draw(batch, "Ability: Magic Burst", mageBox.x + 10, mageBox.y - 30);
+        font.draw(batch, "HP: 150  ATK: 8", gooseBox.x + 10, gooseBox.y - 10);
+        font.draw(batch, "Ability: Rapid Fire", gooseBox.x + 10, gooseBox.y - 30);
+
+        font.draw(batch, "HP: 100  ATK: 15", giraffeBox.x + 10, giraffeBox.y - 10);
+        font.draw(batch, "Ability: Magic Burst", giraffeBox.x + 10, giraffeBox.y - 30);
+
         font.getData().setScale(2f);
 
         batch.end();
     }
 
-    private void drawCharacterBox(Rectangle box, Texture texture, String name, boolean hovered) {
-        // Draw border (highlight if hovered)
+    private void drawCharacterBox(Rectangle box, Texture texture, boolean hovered) {
+        // Highlight effect
         if (hovered) {
-            batch.setColor(1f, 1f, 0f, 1f); // Yellow highlight
+            batch.setColor(1f, 1f, 0f, 1f);
         } else {
-            batch.setColor(0.3f, 0.3f, 0.3f, 1f); // Gray border
+            batch.setColor(1f, 1f, 1f, 1f);
         }
 
-        // Simple border effect
-        batch.draw(texture, box.x - 5, box.y - 5, box.width + 10, box.height + 10);
-
-        // Draw character preview
-        batch.setColor(1f, 1f, 1f, 1f);
+        // Draw character
         batch.draw(texture, box.x, box.y, box.width, box.height - 50);
 
-        // Draw character name
-        font.draw(batch, name, box.x + 50, box.y + box.height - 10);
+        // Reset color
+        batch.setColor(1f, 1f, 1f, 1f);
     }
 
     @Override
     public void resize(int width, int height) {
-        camera.setToOrtho(false, width, height);
+        viewport.update(width, height, true);
     }
 
-    @Override
-    public void pause() {}
-
-    @Override
-    public void resume() {}
-
-    @Override
-    public void hide() {}
+    @Override public void pause() {}
+    @Override public void resume() {}
+    @Override public void hide() {}
 
     @Override
     public void dispose() {
         font.dispose();
         goosePreview.dispose();
-        magePreview.dispose();
+        giraffePreview.dispose();
         backgroundTexture.dispose();
     }
 }
