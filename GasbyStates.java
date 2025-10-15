@@ -1,0 +1,3 @@
+public enum GasbyState {
+    WALK, PREPARE_DASH, DASH_ATTACK, POLTERGEIST, DAMAGED
+}
