@@ -169,6 +169,9 @@ public abstract class Enemy {
         } else {
             setState(EnemyState.DAMAGED);
         }
+
+        // Play hit sound for enemy when damaged
+        SoundManager.getInstance().playHit();
     }
 
     public Rectangle getBounds() {

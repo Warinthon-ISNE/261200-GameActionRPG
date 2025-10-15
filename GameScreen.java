@@ -15,14 +15,15 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+// GameScreen — main gameplay loop.Handles hero, enemies, attacks, HUD, victory, and defeat.
 public class GameScreen implements Screen {
     final Main game;
 
-    // === WORLD CONFIG ===
+    // === WORLD ===
     private static final float WORLD_WIDTH = 20f;
     private static final float WORLD_HEIGHT = 14f;
 
-    // === CAMERA & VIEWPORT ===
+    // === CAMERA ===
     private OrthographicCamera camera;
     private Viewport viewport;
     private OrthographicCamera hudCamera;
@@ -43,19 +44,17 @@ public class GameScreen implements Screen {
     private Texture enemyTexture;
     private EnemySpawner spawner;
 
-    // === ATTACK SYSTEM ===
+    // === ATTACKS ===
     private AttackManager attackManager;
 
     // === HUD ===
     private BitmapFont font;
 
-    // === GAME END SYSTEM ===
+    // === GAME STATES ===
     private boolean heroDead = false;
     private float deathTimer = 0f;
     private boolean victoryAchieved = false;
     private float victoryTimer = 0f;
-
-    // define the final wave
     private static final int FINAL_WAVE = 3;
 
     public GameScreen(Main game, String characterType) {
@@ -65,6 +64,7 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
+        // Cameras
         camera = new OrthographicCamera();
         viewport = new StretchViewport(10f, 7f, camera);
         camera.position.set(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, 0);
@@ -75,7 +75,7 @@ public class GameScreen implements Screen {
 
         backgroundTexture = new Texture("noblehouse01.png");
 
-        // --- HERO SETUP ---
+        // Hero setup
         if (selectedCharacter.equals("goose")) {
             hero = new Goose(3f, 2f);
             speed = 3f;
@@ -87,32 +87,38 @@ public class GameScreen implements Screen {
             selectedCharacter = "goose";
         }
 
-        // --- ENEMY & ATTACK SETUP ---
+        // Enemy + attack setup
         enemies = new Array<>();
         enemyTexture = new Texture("enemy.png");
         attackManager = new AttackManager(hero);
         Array<Projectile> enemyProjectiles = new Array<>();
         spawner = new EnemySpawner(enemies, hero, WORLD_WIDTH, WORLD_HEIGHT, enemyProjectiles);
 
-        // --- HUD SETUP ---
+        // HUD
         font = new BitmapFont();
         font.setColor(Color.WHITE);
         font.getData().setScale(1f);
+
+        // Start background music when the game starts
+        SoundManager.getInstance().playMusic();
+
     }
 
     @Override
     public void render(float delta) {
-        // === ESC to Quit to Selection ===
+        // === Quit to menu ===
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             game.setScreen(new CharacterSelectionScreen(game));
             dispose();
             return;
         }
 
-        // === GAME OVER ===
+        // === Death check ===
         if (!heroDead && hero.isDead()) {
             heroDead = true;
             deathTimer = 0f;
+            // Stop music when player dies
+            SoundManager.getInstance().stopMusic();
         }
         if (heroDead) {
             deathTimer += delta;
@@ -123,10 +129,12 @@ public class GameScreen implements Screen {
             }
         }
 
-        // === VICTORY CHECK ===
+        // === Victory check ===
         if (!victoryAchieved && spawner.isFinalWaveCleared()) {
             victoryAchieved = true;
             victoryTimer = 0f;
+            // Stop music when player wins
+            SoundManager.getInstance().stopMusic();
         }
         if (victoryAchieved) {
             victoryTimer += delta;
@@ -137,7 +145,7 @@ public class GameScreen implements Screen {
             }
         }
 
-        // === NORMAL GAME UPDATES ===
+        // === Update logic ===
         handleInput(delta);
         updateLogic(delta);
         updateAttack(delta);
@@ -147,6 +155,7 @@ public class GameScreen implements Screen {
         draw();
     }
 
+    /** Handle movement input */
     private void handleInput(float delta) {
         float dx = 0, dy = 0;
         boolean moving = false;
@@ -160,16 +169,13 @@ public class GameScreen implements Screen {
         hero.updateAnimation(delta, moving, direction, facingRight);
     }
 
+    /** Keeps hero and camera in bounds */
     private void updateLogic(float delta) {
         Vector2 pos = hero.getPosition();
         pos.x = MathUtils.clamp(pos.x, 0, WORLD_WIDTH - heroWidth);
         pos.y = MathUtils.clamp(pos.y, 0, WORLD_HEIGHT - heroHeight);
 
-        camera.position.lerp(
-            new com.badlogic.gdx.math.Vector3(pos.x + heroWidth / 2f, pos.y + heroHeight / 2f, 0),
-            0.1f
-        );
-
+        camera.position.lerp(new com.badlogic.gdx.math.Vector3(pos.x + heroWidth / 2f, pos.y + heroHeight / 2f, 0), 0.1f);
         float halfW = camera.viewportWidth * 0.5f;
         float halfH = camera.viewportHeight * 0.5f;
         camera.position.x = MathUtils.clamp(camera.position.x, halfW, WORLD_WIDTH - halfW);
@@ -177,6 +183,7 @@ public class GameScreen implements Screen {
         camera.update();
     }
 
+    /** Handles bullets and collisions */
     private void updateAttack(float delta) {
         Vector2 heroCenter = new Vector2(hero.getPosition().x + heroWidth / 2f, hero.getPosition().y + heroHeight / 2f);
         Vector2 mouseWorld = viewport.unproject(new Vector2(Gdx.input.getX(), Gdx.input.getY()));
@@ -194,20 +201,22 @@ public class GameScreen implements Screen {
         }
     }
 
+    /** Updates enemy logic and removes dead ones */
     private void updateEnemies(float delta) {
         for (Enemy e : enemies) e.update(delta);
-        for (int i = enemies.size - 1; i >= 0; i--) {
+        for (int i = enemies.size - 1; i >= 0; i--)
             if (enemies.get(i).isDead()) enemies.removeIndex(i);
-        }
     }
 
+    /** Draws world, hero, enemies, and HUD */
     private void draw() {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        viewport.apply();
         SpriteBatch batch = game.batch;
+        viewport.apply();
 
+        // World
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -217,7 +226,7 @@ public class GameScreen implements Screen {
         attackManager.render(batch);
         batch.end();
 
-        // === HUD ===
+        // HUD
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
         font.draw(batch, "Character: " + selectedCharacter.toUpperCase(), 20, Gdx.graphics.getHeight() - 20);
@@ -231,10 +240,14 @@ public class GameScreen implements Screen {
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}
-    @Override public void dispose() {
+
+    @Override
+    public void dispose() {
         backgroundTexture.dispose();
         enemyTexture.dispose();
         attackManager.dispose();
         font.dispose();
+        // stop music just in case
+        SoundManager.getInstance().stopMusic();
     }
 }

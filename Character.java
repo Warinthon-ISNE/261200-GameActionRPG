@@ -3,22 +3,20 @@ package com.ISNE12.project;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 
+//Base class for all playable characters.
 public abstract class Character {
 
-    // === Basic Stats ===
-    protected int maxHp;
-    protected int hp;
-    protected int attack;
-    protected float attackSpeed; // attacks per second (used for fire rate)
+    // === Stats ===
+    protected int maxHp, hp, attack;
+    protected float attackSpeed;   // attacks per second
 
-    // === Position & Movement ===
+    // === Movement ===
     protected Vector2 position;
-    protected float baseSpeed;
-    protected float speed;
+    protected float baseSpeed, speed;
 
-    // === Gameplay State ===
+    // === State ===
     protected int kills;
-    protected float stateTime = 0f;
+    protected float stateTime = 0f; // for animation timing
 
     // === Constructor ===
     public Character(int maxHp, int attack, float attackSpeed, float startX, float startY) {
@@ -28,38 +26,32 @@ public abstract class Character {
         this.attackSpeed = attackSpeed;
         this.position = new Vector2(startX, startY);
         this.kills = 0;
-
         this.baseSpeed = 2f;
         this.speed = baseSpeed;
     }
 
     // === Movement ===
-    public void move(float dx, float dy) {
-        position.add(dx, dy);
-    }
+    public void move(float dx, float dy) { position.add(dx, dy); }
 
     // === Combat ===
-    public void takeDamage(int damage) {
+    public void takeDamage(int damage){
         hp = Math.max(0, hp - damage);
-    }
 
-    public void heal(int amount) {
-        hp = Math.min(maxHp, hp + amount);
+        // Play hit sound when taking damage
+        SoundManager.getInstance().playHit();
     }
+    public void heal(int amount) { hp = Math.min(maxHp, hp + amount); }
 
+    // Add kill and trigger passive effect
     public void addKill() {
         kills++;
-        applyPassive(); // Recalculate passives when kill count changes
+        applyPassive();
     }
 
-    public boolean isDead() {
-        return hp <= 0;
-    }
+    public boolean isDead() { return hp <= 0; }
 
-    // === Animation Hooks ===
-
+    // === Animation (to be implemented by subclass) ===
     public abstract void updateAnimation(float delta, boolean moving, String direction, boolean facingRight);
-
     public abstract TextureRegion getCurrentFrame();
 
     // === Passive & Shooting ===
@@ -76,11 +68,6 @@ public abstract class Character {
     public float getSpeed() { return speed; }
 
     // === Setters ===
-    public void setSpeed(float newSpeed) {
-        this.speed = Math.max(0f, newSpeed);
-    }
-
-    public void setAttackSpeed(float newAttackSpeed) {
-        this.attackSpeed = Math.max(0.1f, newAttackSpeed);
-    }
+    public void setSpeed(float newSpeed) { speed = Math.max(0f, newSpeed); }
+    public void setAttackSpeed(float newAttackSpeed) { attackSpeed = Math.max(0.1f, newAttackSpeed); }
 }
