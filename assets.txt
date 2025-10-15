@@ -1,0 +1,16 @@
+.gitkeep
+Side_Zombie.png
+background.jpg
+background.mp3
+enemy.png
+giraffe.png
+giraffe1.png
+goose.png
+goose1.png
+goose_bullet.png
+hit.wav
+logo.jpg
+magic_bullet.png
+noblehouse01.png
+poltergeist.png
+zombie.png
