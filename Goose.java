@@ -4,12 +4,9 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
-/**
- * Goose — gains additional bullets every 5 kills (up to 4 total).
- * Uses goose_bullet.png.
- */
 public class Goose extends Character {
 
+    // === Animation ===
     private Texture heroSheet;
     private TextureRegion[][] frames;
     private Animation<TextureRegion> animDown, animUp, animSide;
@@ -17,14 +14,15 @@ public class Goose extends Character {
     private boolean facingRight = true;
     private float stateTime = 0f;
 
-    // Passive tracking
+    // === Passive tracking ===
     private int lastKillThreshold = 0;
     private int extraShots = 0;
-    private final int maxExtraShots = 3;
+    private final int maxExtraShots = 3; // +3 max → 4 total bullets
+    private boolean nextDiagonalRight = true; // alternates every 5 kills
 
     public Goose(float startX, float startY) {
-        super(150, 8, 5, startX, startY);
-        this.attackSpeed = 2.0f; // 2 shots per second
+        // (maxHp, attack, attackSpeed, startX, startY)
+        super(200, 20, 1.5f, startX, startY);
 
         heroSheet = new Texture("goose.png");
         frames = TextureRegion.split(heroSheet, heroSheet.getWidth() / 3, heroSheet.getHeight() / 4);
@@ -41,22 +39,40 @@ public class Goose extends Character {
         this.stateTime += delta;
         this.facingRight = facingRight;
 
+        // --- Choose animation based on direction ---
         if (moving) {
             switch (direction) {
-                case "up":   currentFrame = animUp.getKeyFrame(stateTime, true); break;
-                case "down": currentFrame = animDown.getKeyFrame(stateTime, true); break;
-                case "side": currentFrame = animSide.getKeyFrame(stateTime, true); break;
+                case "up":
+                    currentFrame = animUp.getKeyFrame(stateTime, true);
+                    break;
+                case "down":
+                    currentFrame = animDown.getKeyFrame(stateTime, true);
+                    break;
+                case "side":
+                    currentFrame = animSide.getKeyFrame(stateTime, true);
+                    break;
             }
         } else {
+            // idle frame for each direction
             switch (direction) {
-                case "up":   currentFrame = frames[3][1]; break;
-                case "down": currentFrame = frames[0][1]; break;
-                case "side": currentFrame = frames[1][1]; break;
+                case "up":
+                    currentFrame = frames[3][1];
+                    break;
+                case "down":
+                    currentFrame = frames[0][1];
+                    break;
+                case "side":
+                    currentFrame = frames[1][1];
+                    break;
             }
         }
 
-        if (facingRight && !currentFrame.isFlipX()) currentFrame.flip(true, false);
-        else if (!facingRight && currentFrame.isFlipX()) currentFrame.flip(true, false);
+        // --- Flip horizontally like old version ---
+        if (facingRight && !currentFrame.isFlipX()) {
+            currentFrame.flip(true, false);
+        } else if (!facingRight && currentFrame.isFlipX()) {
+            currentFrame.flip(true, false);
+        }
     }
 
     @Override
@@ -64,11 +80,12 @@ public class Goose extends Character {
         return currentFrame;
     }
 
+    // Passive — every 5 kills, Goose gains +1 bullet (max 4 total). Alternates the diagonal shooting direction each time.
     @Override
     public void applyPassive() {
-        int currentThreshold = kills / 5;
-        if (currentThreshold > lastKillThreshold) {
-            lastKillThreshold = currentThreshold;
+        int threshold = (kills / 5) * 5;
+        if (kills > 0 && kills % 5 == 0 && threshold != lastKillThreshold) {
+            lastKillThreshold = threshold;
             increaseExtraShots();
         }
     }
@@ -76,21 +93,25 @@ public class Goose extends Character {
     private void increaseExtraShots() {
         if (extraShots < maxExtraShots) {
             extraShots++;
-            System.out.println("Goose Multishot increased! (" + (extraShots + 1) + " total bullets)");
+            nextDiagonalRight = !nextDiagonalRight; // alternate pattern
+            System.out.println("Goose multishot +1 (" + (extraShots + 1) +
+                " bullets) → next side: " + (nextDiagonalRight ? "right" : "left"));
         }
     }
 
-    public int getExtraShots() { return extraShots; }
+    // === Getters ===
+    public int getExtraShots() {
+        return extraShots;
+    }
 
-    @Override
-    public void useSpecialAbility() {
-        defense += 5;
-        System.out.println("Goose used Feather Shield!");
+    // Whether the next diagonal spread should go right or left
+    public boolean isDiagonalRight() {
+        return nextDiagonalRight;
     }
 
     @Override
     public String getBulletTexturePath() {
-        return "bullet.png"; // 👈 unique bullet
+        return "goose_bullet.png";
     }
 
     public void dispose() {

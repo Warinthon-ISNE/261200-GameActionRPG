@@ -32,7 +32,7 @@ public class GameScreen implements Screen {
 
     // === HERO ===
     private Character hero;
-    private String selectedCharacter; // store which character was chosen
+    private String selectedCharacter;
     private float heroWidth = 1f, heroHeight = 1f;
     private float speed = 3f;
     private String direction = "down";
@@ -41,6 +41,7 @@ public class GameScreen implements Screen {
     // === ENEMIES ===
     private Array<Enemy> enemies;
     private Texture enemyTexture;
+    private EnemySpawner spawner;
 
     // === ATTACK SYSTEM ===
     private AttackManager attackManager;
@@ -48,7 +49,15 @@ public class GameScreen implements Screen {
     // === HUD ===
     private BitmapFont font;
 
-    /** Constructor receives selected character type */
+    // === GAME END SYSTEM ===
+    private boolean heroDead = false;
+    private float deathTimer = 0f;
+    private boolean victoryAchieved = false;
+    private float victoryTimer = 0f;
+
+    // define the final wave
+    private static final int FINAL_WAVE = 3;
+
     public GameScreen(Main game, String characterType) {
         this.game = game;
         this.selectedCharacter = characterType;
@@ -56,49 +65,36 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        // CAMERA SETUP
         camera = new OrthographicCamera();
-        viewport = new StretchViewport(10f, 7f, camera); // fills screen
+        viewport = new StretchViewport(10f, 7f, camera);
         camera.position.set(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, 0);
         camera.update();
 
-        // HUD CAMERA
         hudCamera = new OrthographicCamera();
         hudCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        // LOAD BACKGROUND
         backgroundTexture = new Texture("noblehouse01.png");
 
-        // HERO INIT (based on selection)
+        // --- HERO SETUP ---
         if (selectedCharacter.equals("goose")) {
             hero = new Goose(3f, 2f);
             speed = 3f;
         } else if (selectedCharacter.equals("giraffe")) {
             hero = new Giraffe(3f, 2f);
-            speed = 2.5f; // giraffe moves slower
+            speed = 2.5f;
         } else {
             hero = new Goose(3f, 2f);
             selectedCharacter = "goose";
         }
 
-        // ✅ Pass the hero object (not the string)
-        attackManager = new AttackManager(hero);
-
-        // ENEMIES
+        // --- ENEMY & ATTACK SETUP ---
         enemies = new Array<>();
         enemyTexture = new Texture("enemy.png");
-        enemies.add(new Zombie(1f, 1f, hero));
-        enemies.add(new GasbySamSi(7f, 4f, "blue", 2f, hero));
-        enemies.add(new GasbySamSi(2f, 4f, "red", 3f, hero));
-        enemies.add(new Zombie(1f, 1f, hero));
-        enemies.add(new Zombie(1f, 1f, hero));
-        enemies.add(new Zombie(1f, 1f, hero));
-        enemies.add(new Zombie(1f, 1f, hero));
-        enemies.add(new Zombie(1f, 1f, hero));
-        enemies.add(new Zombie(1f, 1f, hero));
-        enemies.add(new Zombie(1f, 1f, hero));
+        attackManager = new AttackManager(hero);
+        Array<Projectile> enemyProjectiles = new Array<>();
+        spawner = new EnemySpawner(enemies, hero, WORLD_WIDTH, WORLD_HEIGHT, enemyProjectiles);
 
-        // FONT
+        // --- HUD SETUP ---
         font = new BitmapFont();
         font.setColor(Color.WHITE);
         font.getData().setScale(1f);
@@ -106,21 +102,51 @@ public class GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // Optional: allow returning to character select with ESC
+        // === ESC to Quit to Selection ===
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             game.setScreen(new CharacterSelectionScreen(game));
             dispose();
             return;
         }
 
+        // === GAME OVER ===
+        if (!heroDead && hero.isDead()) {
+            heroDead = true;
+            deathTimer = 0f;
+        }
+        if (heroDead) {
+            deathTimer += delta;
+            if (deathTimer > 0.2f) {
+                game.setScreen(new GameOverScreen(game, hero.getKills(), spawner.getCurrentWave()));
+                dispose();
+                return;
+            }
+        }
+
+        // === VICTORY CHECK ===
+        if (!victoryAchieved && spawner.isFinalWaveCleared()) {
+            victoryAchieved = true;
+            victoryTimer = 0f;
+        }
+        if (victoryAchieved) {
+            victoryTimer += delta;
+            if (victoryTimer > 2f) {
+                game.setScreen(new VictoryScreen(game, hero.getKills(), FINAL_WAVE));
+                dispose();
+                return;
+            }
+        }
+
+        // === NORMAL GAME UPDATES ===
         handleInput(delta);
         updateLogic(delta);
         updateAttack(delta);
         updateEnemies(delta);
+        spawner.update(delta);
+
         draw();
     }
 
-    /** Handle hero movement and pass direction info to hero */
     private void handleInput(float delta) {
         float dx = 0, dy = 0;
         boolean moving = false;
@@ -134,48 +160,40 @@ public class GameScreen implements Screen {
         hero.updateAnimation(delta, moving, direction, facingRight);
     }
 
-    /** World and camera logic */
     private void updateLogic(float delta) {
-        hero.applyPassive(); // hero’s passive skill logic
-
         Vector2 pos = hero.getPosition();
         pos.x = MathUtils.clamp(pos.x, 0, WORLD_WIDTH - heroWidth);
         pos.y = MathUtils.clamp(pos.y, 0, WORLD_HEIGHT - heroHeight);
 
-        // Smooth camera follow
         camera.position.lerp(
             new com.badlogic.gdx.math.Vector3(pos.x + heroWidth / 2f, pos.y + heroHeight / 2f, 0),
             0.1f
         );
 
-        // Clamp camera inside world bounds
         float halfW = camera.viewportWidth * 0.5f;
         float halfH = camera.viewportHeight * 0.5f;
         camera.position.x = MathUtils.clamp(camera.position.x, halfW, WORLD_WIDTH - halfW);
         camera.position.y = MathUtils.clamp(camera.position.y, halfH, WORLD_HEIGHT - halfH);
-
         camera.update();
     }
 
-    /** Attack & bullet logic */
     private void updateAttack(float delta) {
         Vector2 heroCenter = new Vector2(hero.getPosition().x + heroWidth / 2f, hero.getPosition().y + heroHeight / 2f);
         Vector2 mouseWorld = viewport.unproject(new Vector2(Gdx.input.getX(), Gdx.input.getY()));
         attackManager.update(delta, heroCenter, mouseWorld);
 
-        // Bullet collisions
         for (Bullet bullet : attackManager.getBullets()) {
             for (Enemy e : enemies) {
                 if (!e.isDead() && bullet.getBounds().overlaps(e.getBounds())) {
                     e.gotDamage(hero.getAttack());
-                    bullet.setActive(false);
+                    bullet.deactivate();
                     if (e.isDead()) hero.addKill();
+                    break;
                 }
             }
         }
     }
 
-    /** Enemy update & cleanup */
     private void updateEnemies(float delta) {
         for (Enemy e : enemies) e.update(delta);
         for (int i = enemies.size - 1; i >= 0; i--) {
@@ -183,7 +201,6 @@ public class GameScreen implements Screen {
         }
     }
 
-    /** Draw world + HUD */
     private void draw() {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -191,7 +208,6 @@ public class GameScreen implements Screen {
         viewport.apply();
         SpriteBatch batch = game.batch;
 
-        // === WORLD RENDER ===
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -201,28 +217,21 @@ public class GameScreen implements Screen {
         attackManager.render(batch);
         batch.end();
 
-        // === HUD RENDER ===
+        // === HUD ===
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
         font.draw(batch, "Character: " + selectedCharacter.toUpperCase(), 20, Gdx.graphics.getHeight() - 20);
         font.draw(batch, "HP: " + hero.getHp() + "/" + hero.getMaxHp(), 20, Gdx.graphics.getHeight() - 45);
-        font.draw(batch, "ATK: " + hero.getAttack(), 20, Gdx.graphics.getHeight() - 70);
-        font.draw(batch, "Kills: " + hero.getKills(), 20, Gdx.graphics.getHeight() - 95);
+        font.draw(batch, "Kills: " + hero.getKills(), 20, Gdx.graphics.getHeight() - 70);
+        font.draw(batch, "Wave: " + spawner.getCurrentWave() + "/" + FINAL_WAVE, 20, Gdx.graphics.getHeight() - 95);
         batch.end();
     }
 
-    @Override
-    public void resize(int width, int height) {
-        viewport.update(width, height, true);
-        hudCamera.setToOrtho(false, width, height);
-    }
-
+    @Override public void resize(int width, int height) { viewport.update(width, height, true); hudCamera.setToOrtho(false, width, height); }
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}
-
-    @Override
-    public void dispose() {
+    @Override public void dispose() {
         backgroundTexture.dispose();
         enemyTexture.dispose();
         attackManager.dispose();

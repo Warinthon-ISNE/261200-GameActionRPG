@@ -14,30 +14,34 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+/**
+ * CharacterSelectionScreen — lets player choose between Goose and Giraffe.
+ * Hover over a character to highlight, click to start the game.
+ */
 public class CharacterSelectionScreen implements Screen {
-    final Main game;
+    private final Main game;
     private OrthographicCamera camera;
     private Viewport viewport;
     private SpriteBatch batch;
     private BitmapFont font;
 
-    // Character preview textures
+    // === Assets ===
     private Texture goosePreview;
     private Texture giraffePreview;
     private Texture backgroundTexture;
 
-    // Selection boxes
+    // === Selection boxes ===
     private Rectangle gooseBox;
     private Rectangle giraffeBox;
 
-    // UI dimensions
+    // === UI layout constants ===
     private static final float WORLD_WIDTH = 1280f;
     private static final float WORLD_HEIGHT = 720f;
-    private static final float BOX_WIDTH = 200;
-    private static final float BOX_HEIGHT = 250;
-    private static final float SPACING = 100;
+    private static final float BOX_WIDTH = 220f;
+    private static final float BOX_HEIGHT = 270f;
+    private static final float SPACING = 120f;
 
-    // Hovered / selected
+    // === State ===
     private int hoveredChar = -1;
 
     public CharacterSelectionScreen(Main game) {
@@ -55,21 +59,22 @@ public class CharacterSelectionScreen implements Screen {
 
         batch = game.batch;
 
+        // FONT SETUP
         font = new BitmapFont();
         font.setColor(Color.WHITE);
         font.getData().setScale(2f);
 
-        // Load images
+        // LOAD TEXTURES
         goosePreview = new Texture("goose1.png");
         giraffePreview = new Texture("giraffe.png");
         backgroundTexture = new Texture("background.jpg");
 
-        // Setup selection boxes
+        // CHARACTER BOXES (centered horizontally)
         float centerX = WORLD_WIDTH / 2f;
-        float centerY = WORLD_HEIGHT / 2f;
+        float centerY = WORLD_HEIGHT / 2f - 40f;
 
-        gooseBox = new Rectangle(centerX - BOX_WIDTH - SPACING / 2, centerY - BOX_HEIGHT / 2, BOX_WIDTH, BOX_HEIGHT);
-        giraffeBox = new Rectangle(centerX + SPACING / 2, centerY - BOX_HEIGHT / 2, BOX_WIDTH, BOX_HEIGHT);
+        gooseBox = new Rectangle(centerX - BOX_WIDTH - SPACING / 2f, centerY - BOX_HEIGHT / 2f, BOX_WIDTH, BOX_HEIGHT);
+        giraffeBox = new Rectangle(centerX + SPACING / 2f, centerY - BOX_HEIGHT / 2f, BOX_WIDTH, BOX_HEIGHT);
     }
 
     @Override
@@ -78,6 +83,7 @@ public class CharacterSelectionScreen implements Screen {
         draw();
     }
 
+    /** Handle mouse hover and click selection */
     private void handleInput() {
         Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         viewport.unproject(touchPos);
@@ -89,7 +95,8 @@ public class CharacterSelectionScreen implements Screen {
             hoveredChar = 1;
         }
 
-        if (Gdx.input.justTouched()) {
+        // Mouse click or Enter key confirms selection
+        if (Gdx.input.justTouched() || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             if (hoveredChar == 0) {
                 game.setScreen(new GameScreen(game, "goose"));
                 dispose();
@@ -100,59 +107,57 @@ public class CharacterSelectionScreen implements Screen {
         }
     }
 
+    /** Draw UI and background */
     private void draw() {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.15f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         camera.update();
         batch.setProjectionMatrix(camera.combined);
-
         batch.begin();
 
-        // Draw background scaled to fit screen
+        // === Background ===
         batch.draw(backgroundTexture, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-        // Title
-        font.draw(batch, "SELECT YOUR CHARACTER", WORLD_WIDTH / 2f - 300, WORLD_HEIGHT - 60);
+        // === Title ===
+        font.getData().setScale(2.5f);
+        font.draw(batch, "SELECT YOUR CHARACTER", WORLD_WIDTH / 2f - 300, WORLD_HEIGHT - 80);
 
-        // Draw character boxes (no text inside)
+        // === Draw character boxes ===
         drawCharacterBox(gooseBox, goosePreview, hoveredChar == 0);
         drawCharacterBox(giraffeBox, giraffePreview, hoveredChar == 1);
 
-        // === Draw Names Separately ===
+        // === Character names (centered above boxes) ===
         font.getData().setScale(2f);
+        font.draw(batch, "GOOSE",
+            gooseBox.x + gooseBox.width / 2f - 60f,
+            gooseBox.y + gooseBox.height + 40f);
 
-        // Goose name (adjust horizontally until centered)
-        font.draw(batch, "GOOSE", gooseBox.x + 50, gooseBox.y + gooseBox.height);
+        font.draw(batch, "GIRAFFE",
+            giraffeBox.x + giraffeBox.width / 2f - 70f,
+            giraffeBox.y + giraffeBox.height + 40f);
 
-        // Giraffe name (already looks centered, so leave default)
-        font.draw(batch, "GIRAFFE", giraffeBox.x + 40, giraffeBox.y + giraffeBox.height);
+        // === Character stats / abilities ===
+        font.getData().setScale(1.2f);
+        font.draw(batch, "HP: 200  ATK: 20  ATKSPD: 1.5", gooseBox.x + 10, gooseBox.y - 10);
+        font.draw(batch, "Passive: Multishot (+1 bullet per 5 kills)", gooseBox.x + 10, gooseBox.y - 30);
 
-        // === Character Stats ===
-        font.getData().setScale(1f);
-        font.draw(batch, "HP: 150  ATK: 8", gooseBox.x + 10, gooseBox.y - 10);
-        font.draw(batch, "Ability: Rapid Fire", gooseBox.x + 10, gooseBox.y - 30);
-
-        font.draw(batch, "HP: 100  ATK: 15", giraffeBox.x + 10, giraffeBox.y - 10);
-        font.draw(batch, "Ability: Magic Burst", giraffeBox.x + 10, giraffeBox.y - 30);
-
-        font.getData().setScale(2f);
+        font.draw(batch, "HP: 100  ATK: 10  ATKSPD: 3", giraffeBox.x + 10, giraffeBox.y - 10);
+        font.draw(batch, "Passive: Rapid Fire (+0.3 atk speed per 5 kills)", giraffeBox.x + 10, giraffeBox.y - 30);
 
         batch.end();
     }
 
+    /** Draws one selectable character preview box */
     private void drawCharacterBox(Rectangle box, Texture texture, boolean hovered) {
-        // Highlight effect
         if (hovered) {
-            batch.setColor(1f, 1f, 0f, 1f);
+            // Hover highlight
+            batch.setColor(1f, 1f, 0.5f, 1f);
         } else {
             batch.setColor(1f, 1f, 1f, 1f);
         }
 
-        // Draw character
         batch.draw(texture, box.x, box.y, box.width, box.height - 50);
-
-        // Reset color
         batch.setColor(1f, 1f, 1f, 1f);
     }
 

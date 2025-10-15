@@ -1,69 +1,129 @@
 package com.ISNE12.project;
 
-import static com.badlogic.gdx.math.MathUtils.random;
+import com.badlogic.gdx.math.Vector2;
+import java.util.Random;
 
+/**
+ * GasbySamSi — Base class for Red & Blue Gasby enemies.
+ * - Blue: Uses ranged Poltergeist attack.
+ * - Red: Uses dash melee attack.
+ */
 public class GasbySamSi extends Enemy {
 
-    // We have 3 different types of Gasby -- Red, Blue & Purple
-    public GasbySamSi(float x, float y, String color, float speed, Character target) {
-        super(x, y, new EnemyStat(getHP(color), getATK(color), getDEF(color)), speed, target);
+    protected final String color;
+    private final Random random = new Random();
+
+    // === Attack properties ===
+    protected float attackCooldown = 4f; // seconds
+    protected float attackTimer = 0f;
+    protected float dashRange = 4f;
+    protected float shootRange = 7f;
+    protected float dashSpeed = 6f;
+    protected boolean isDashing = false;
+
+    public GasbySamSi(float x, float y, String color, Character target) {
+        super(x, y, getHP(color), getATK(color), 0.5f, target);
+        this.color = color.toLowerCase();
     }
 
-    // update Stat by each color
+    @Override
+    public void update(float delta) {
+        if (isDead) {
+            super.update(delta);
+            return;
+        }
+
+        attackTimer += delta;
+
+        // Choose behavior
+        if (shouldAttack()) {
+            performAttack(delta);
+        } else {
+            aiming(delta); // move toward player
+        }
+
+        // Let base class handle animation and bounds
+        super.update(delta);
+    }
+
+    /** Determines whether Gasby should attack (by range + cooldown). */
+    protected boolean shouldAttack() {
+        float distance = Vector2.dst(position.x, position.y,
+            target.getPosition().x, target.getPosition().y);
+        return attackTimer >= attackCooldown && distance <= (color.equals("red") ? dashRange : shootRange);
+    }
+
+    /** Performs the correct attack depending on color. */
+    protected void performAttack(float delta) {
+        attackTimer = 0f; // reset cooldown
+
+        if (color.equals("blue")) {
+            performPoltergeist();
+        } else if (color.equals("red")) {
+            performDash(delta);
+        }
+    }
+
+    /** Blue Gasby — shoot Poltergeist projectile toward player. */
+    private void performPoltergeist() {
+        Vector2 direction = new Vector2(target.getPosition()).sub(position).nor();
+        GasbyPoltergeist projectile =
+            new GasbyPoltergeist(position.x, position.y, direction, 10f, 5, target);
+
+        // Typically you'd add this to a global projectile list
+        // Example: projectileManager.add(projectile);
+        System.out.println("Blue Gasby fires a Poltergeist!");
+    }
+
+    /** Red Gasby — dash attack (short-range charge). */
+    private void performDash(float delta) {
+        isDashing = true;
+        Vector2 direction = new Vector2(target.getPosition()).sub(position).nor();
+        position.mulAdd(direction, dashSpeed * delta);
+
+        // Apply damage if close enough
+        if (Vector2.dst(position.x, position.y,
+            target.getPosition().x, target.getPosition().y) <= 1.5f) {
+            target.takeDamage(getATK());
+            isDashing = false;
+            System.out.println("Red Gasby hits player with dash!");
+        }
+    }
+
+    // --- Color-based stats ---
     private static int getHP(String color) {
         switch (color.toLowerCase()) {
-            case "blue": return 30;   // normal Gasby
-            case "red": return 30;    // fast Gasby
-            case "purple": return 60; // tank Gasby
-            default: return 30;
+            case "red": return 70;
+            case "blue": return 50;
+            default: return 50;
         }
     }
 
     private static int getATK(String color) {
         switch (color.toLowerCase()) {
-            case "blue": return 10;
-            case "red": return 20;    // damage dealer
-            case "purple": return 10;
-            default: return 10;
+            case "red": return 35;
+            case "blue": return 15;
+            default: return 15;
         }
     }
 
-    private static int getDEF(String color) {
-        switch (color.toLowerCase()) {
-            case "blue": return 20;
-            case "red": return 20;
-            case "purple": return 30;
-            default: return 20;
-        }
-    }
-
-    /*
-    // For future upgrade idea: each color gives Character something after death
+    // --- On death ---
     @Override
     protected void die() {
         super.die();
-        drop();
+        dropLoot();
     }
 
-    private void drop() {
-        // RedGasby: chance to heal
-        // PurpleGasby: chance to increase DEF
-        if (color.equals("red") && random.nextInt(100) >= 50) {
-            target.heal(...);
+    private void dropLoot() {
+        if ("red".equals(color) && random.nextInt(100) < 50) {
+            int healAmount = (int) (target.getMaxHp() * 0.05f); // 5% heal
+            target.heal(healAmount);
+            System.out.println("❤️ Player healed by " + healAmount + " from Red Gasby drop!");
         }
-        if (color.equals("purple") && random.nextInt(100) >= 40) {
-            target.gainDEF(...);
-        }
-    }
-    */
-
-    @Override
-    public void update(float delta) {
-        super.update(delta);
     }
 
     @Override
     public void dispose() {
-        // remove from game
+        // No textures owned directly here — handled by base class or manager.
     }
 }
