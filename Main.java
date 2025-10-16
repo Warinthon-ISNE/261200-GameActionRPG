@@ -14,7 +14,7 @@ public class Main extends Game {
     public void create() {
         batch = new SpriteBatch();
 
-        setScreen(new FirstScreen(this)); // ✅ start at splash screen
+        setScreen(new FirstScreen(this)); // start at splash screen
 
     }
 

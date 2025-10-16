@@ -118,7 +118,7 @@ public class GasbySamSi extends Enemy {
         if ("red".equals(color) && random.nextInt(100) < 50) {
             int healAmount = (int) (target.getMaxHp() * 0.05f); // 5% heal
             target.heal(healAmount);
-            System.out.println("❤️ Player healed by " + healAmount + " from Red Gasby drop!");
+            System.out.println("Player healed by " + healAmount + " from Red Gasby drop!");
         }
     }
 

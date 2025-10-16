@@ -46,7 +46,7 @@ public class EnemySpawner {
     }
 
     public void update(float delta) {
-        if (spawningStopped) return; // ✅ stop completely after final wave is cleared
+        if (spawningStopped) return; // stop completely after final wave is cleared
 
         spawnTimer += delta;
         waveTimer += delta;
@@ -73,7 +73,7 @@ public class EnemySpawner {
 
         // --- Warning message ---
         if (showWaveWarning && waveTimer >= nextWaveDelay - WARNING_TIME) {
-            System.out.println("⚠️ Monster Wave incoming! Prepare yourself!");
+            System.out.println("Monster Wave incoming! Prepare yourself!");
         }
 
         // --- Update all enemies ---
@@ -89,7 +89,7 @@ public class EnemySpawner {
         // --- Stop all spawning after final wave is finished ---
         if (currentWave == 3 && wave3SpawnedCount >= wave3MaxEnemies && enemies.size == 0) {
             spawningStopped = true;
-            System.out.println("✅ Wave 3 cleared — all enemies defeated!");
+            System.out.println("Wave 3 cleared — all enemies defeated!");
         }
     }
 
@@ -111,7 +111,7 @@ public class EnemySpawner {
             setSafeSpawnPosition(e);
             enemies.add(e);
         }
-        System.out.println("🌊 Wave " + currentWave + " spawned with " + count + " enemies!");
+        System.out.println("Wave " + currentWave + " spawned with " + count + " enemies!");
         showWaveWarning = false;
     }
 

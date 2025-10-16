@@ -73,7 +73,7 @@ public class GameScreen implements Screen {
         hudCamera = new OrthographicCamera();
         hudCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        backgroundTexture = new Texture("noblehouse01.png");
+        backgroundTexture = new Texture("map.jpg");
 
         // Hero setup
         if (selectedCharacter.equals("goose")) {
@@ -97,7 +97,7 @@ public class GameScreen implements Screen {
         // HUD
         font = new BitmapFont();
         font.setColor(Color.WHITE);
-        font.getData().setScale(1f);
+        font.getData().setScale(2f);
 
         // Start background music when the game starts
         SoundManager.getInstance().playMusic();

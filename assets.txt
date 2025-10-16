@@ -11,6 +11,6 @@ goose_bullet.png
 hit.wav
 logo.jpg
 magic_bullet.png
-noblehouse01.png
+map.jpg
 poltergeist.png
 zombie.png

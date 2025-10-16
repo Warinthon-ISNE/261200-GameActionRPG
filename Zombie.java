@@ -55,7 +55,7 @@ public class Zombie extends Enemy {
     @Override
     protected void die() {
         super.die();
-        System.out.println("💀 Zombie died at " + position);
+        System.out.println("Zombie died at " + position);
     }
 
     @Override

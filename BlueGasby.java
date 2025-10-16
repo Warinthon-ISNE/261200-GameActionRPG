@@ -90,7 +90,7 @@ public class BlueGasby extends GasbySamSi {
 
         Vector2 direction = new Vector2(target.getPosition()).sub(position).nor();
         GasbyPoltergeist shot = new GasbyPoltergeist(position.x, position.y, direction, 10f, 5, target);
-        projectiles.add(shot); // ✅ now actually added to world/projectile system
+        projectiles.add(shot); // now actually added to world/projectile system
 
         poltergeistTimer = 0f;
         System.out.println("Blue Gasby fires a Poltergeist!");
@@ -129,7 +129,7 @@ public class BlueGasby extends GasbySamSi {
     @Override
     protected void die() {
         super.die();
-        System.out.println("💀 Blue Gasby has been defeated.");
+        System.out.println("Blue Gasby has been defeated.");
     }
 
     @Override
